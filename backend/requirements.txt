@@ -11,4 +11,3 @@ httpx
 psycopg2-binary
 authlib
 cryptography
-py-jws
