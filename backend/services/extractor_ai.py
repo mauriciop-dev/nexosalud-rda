@@ -82,9 +82,7 @@ Return ONLY a valid JSON object, nothing else. No markdown, no explanation."""
                 return self._parse_json(raw_response)
             except Exception as e:
                 print(f"[ExtractorAI] Groq error: {e}")
-                # Fallback to Ollama if Groq fails
-                print("[ExtractorAI] Falling back to local Ollama...")
-                return await self._extract_with_ollama(prompt)
+                return {"error": f"Groq API Error: {str(e)}"}
 
     def _parse_json(self, raw_response: str):
         if not raw_response:
