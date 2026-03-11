@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from services.extractor_ai import ExtractorAI
 from services.fhir_formatter import FHIRFormatter
 from services.minsalud_client import MinSaludClient
+from services.signature_manager import SignatureManager
 from database import get_db
 from core.license_validator import LicenseValidator
 from utils.fhir_validator import FHIRValidator
@@ -27,6 +28,7 @@ extractor = ExtractorAI()
 formatter = FHIRFormatter()
 validator = FHIRValidator()
 minsalud = MinSaludClient()
+signature_manager = SignatureManager()
 db = get_db()
 license_val = LicenseValidator()
 
@@ -42,6 +44,19 @@ class ExtractRequest(BaseModel):
 @app.get("/")
 async def root():
     return {"status": "ok", "message": "NexoSalud RDA Backend is running"}
+
+@app.get("/patient-summary/{patient_id}")
+async def get_patient_summary(patient_id: str):
+    """
+    Endpoint para consulta bidireccional de historia clínica nacional.
+    """
+    try:
+        print(f"Paso 1: Solicitando resumen nacional para {patient_id}...")
+        summary = await minsalud.get_patient_summary(patient_id)
+        return summary
+    except Exception as e:
+        print(f"❌ Error consultando resumen: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/extract-rda")
 async def extract_rda(payload: ExtractRequest):

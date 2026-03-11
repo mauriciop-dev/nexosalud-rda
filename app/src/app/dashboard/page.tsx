@@ -36,7 +36,10 @@ import {
     ClipboardList,
     ExternalLink,
     Database,
-    ShieldCheck
+    ShieldCheck,
+    History,
+    ListTree,
+    Building
 } from 'lucide-react';
 
 // Using some standard lucide icons if the specific ones above don't exist
@@ -210,32 +213,103 @@ function RDASuccessModal({
 }
 
 // ─── Dashboard ─────────────────────────────────────────────────────────────────
-export default function Dashboard() {
+// ─── Timeline Modal Component ────────────────────────────────────────────────
+function ClinicalTimelineModal({
+    data,
+    onClose,
+}: {
+    data: any;
+    onClose: () => void;
+}) {
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(10px)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[85vh]">
+                <div className="bg-slate-900 p-8 text-white relative">
+                    <div className="flex items-center justify-between relative z-10">
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <History className="text-teal-400" size={20} />
+                                <span className="text-teal-400 text-[10px] font-bold uppercase tracking-[0.2em]">Historial Nacional IHCE</span>
+                            </div>
+                            <h2 className="text-2xl font-black tracking-tight">Línea de Tiempo Clínica</h2>
+                            <p className="text-slate-400 text-xs mt-1">Registros recuperados de otras Instituciones Prestadoras de Salud</p>
+                        </div>
+                        <button type="button" onClick={onClose} className="bg-white/10 p-3 rounded-2xl hover:bg-white/20 transition-all">
+                            <X size={20} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-10 bg-slate-50">
+                    {data?.entry?.length > 0 ? (
+                        <div className="space-y-8 relative before:absolute before:inset-0 before:left-[19px] before:w-0.5 before:bg-slate-200 before:content-['']">
+                            {data.entry.map((item: any, idx: number) => {
+                                const res = item.resource;
+                                const isEncounter = res.resourceType === 'Encounter';
+                                const date = isEncounter ? res.period?.start : res.recordedDate || 'Fecha no disponible';
+                                
+                                return (
+                                    <div key={idx} className="relative pl-12 group">
+                                        <div className="absolute left-0 top-0 size-10 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center z-10 group-hover:border-teal-500 transition-colors shadow-sm">
+                                            {isEncounter ? <Activity size={18} className="text-blue-500" /> : <ClipboardList size={18} className="text-emerald-500" />}
+                                        </div>
+                                        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm group-hover:shadow-md transition-all">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(date).toLocaleDateString()}</span>
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${isEncounter ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                                    {res.resourceType}
+                                                </span>
+                                            </div>
+                                            <h4 className="text-slate-800 font-bold mb-1">{isEncounter ? res.type?.[0]?.text : res.code?.coding?.[0]?.display}</h4>
+                                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                <Building size={14} className="text-slate-300" />
+                                                <span>{res.serviceProvider?.display || res.recorder?.display || 'IPS Desconocida'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="text-center py-20">
+                            <div className="bg-slate-100 size-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Search size={32} className="text-slate-300" />
+                            </div>
+                            <h3 className="text-slate-400 font-bold">No se encontraron registros previos</h3>
+                        </div>
+                    )}
+                </div>
+                
+                <div className="p-6 bg-white border-t border-slate-100 flex justify-end">
+                    <button onClick={onClose} className="px-8 py-3 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Main Dashboard Component ────────────────────────────────────────────────
+export default function DashboardPage() {
     const router = useRouter();
+    const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const checkUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                router.push('/login');
-            } else {
-                setLoading(false);
-            }
-        };
-        checkUser();
-    }, [router]);
-
     const [extractText, setExtractText] = useState('');
     const [extracting, setExtracting] = useState(false);
     const [lastExtracted, setLastExtracted] = useState<any>(null);
     const [codigoVida, setCodigoVida] = useState<string | null>(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
-    const [user, setUser] = useState<any>(null);
-    const [motor, setMotor] = useState<'llama3.1' | 'groq'>('groq');
-    const [processedRecords, setProcessedRecords] = useState<Array<{
-        p: string; f: string; t: string; color: string; id: string; isReal?: boolean;
-    }>>([]);
+    const [motor, setMotor] = useState('groq');
+    const [processedRecords, setProcessedRecords] = useState<any[]>([]);
+
+    // FASE 6: Interoperabilidad Bidireccional
+    const [showTimeline, setShowTimeline] = useState(false);
+    const [historicalData, setHistoricalData] = useState<any>(null);
+    const [fetchingHistory, setFetchingHistory] = useState(false);
+    const [searchId, setSearchId] = useState('');
 
     useEffect(() => {
         const checkUser = async () => {
@@ -331,6 +405,31 @@ export default function Dashboard() {
         }
     };
 
+    const handleFetchHistory = async () => {
+        if (!searchId) {
+            alert('⚠️ Ingrese un ID de paciente para consultar el historial nacional.');
+            return;
+        }
+        setFetchingHistory(true);
+        try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+            const response = await fetch(`${apiUrl}/patient-summary/${searchId}`);
+            const data = await response.json();
+            
+            if (data && data.resourceType === 'Bundle') {
+                setHistoricalData(data);
+                setShowTimeline(true);
+            } else {
+                alert('No se encontró historial clínico para este paciente en el bus nacional.');
+            }
+        } catch (error) {
+            console.error('Error fetching history:', error);
+            alert('Error consultando el bus de interoperabilidad.');
+        } finally {
+            setFetchingHistory(false);
+        }
+    };
+
     if (loading) return (
         <div className="h-screen w-screen flex items-center justify-center bg-slate-50">
             <div className="flex flex-col items-center gap-4">
@@ -407,23 +506,36 @@ export default function Dashboard() {
                 {/* Main */}
                 <main className="flex-1 flex flex-col overflow-hidden">
                     {/* Header */}
-                    <header className="bg-white border-b border-slate-100 px-10 py-5 flex items-center justify-between shadow-[0_4px_24px_rgba(0,0,0,0.02)] z-10">
-                        <h2 className="text-xl font-black text-slate-800 tracking-tight">Panel de Control</h2>
-                        <div className="flex items-center gap-4">
-                            <div className="relative">
-                                <Search size={18} className="text-slate-300 absolute left-3 top-1/2 -translate-y-1/2" />
-                                <input
-                                    type="search"
-                                    placeholder="Buscar paciente o ID..."
-                                    className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500/30 transition-all placeholder:text-slate-300 w-64"
-                                />
+                        <header className="bg-white border-b border-slate-100 px-10 py-5 flex items-center justify-between shadow-[0_4px_24px_rgba(0,0,0,0.02)] z-10">
+                            <h2 className="text-xl font-black text-slate-800 tracking-tight">Panel de Control</h2>
+                            <div className="flex items-center gap-4">
+                                <div className="flex bg-slate-50 border border-slate-100 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-teal-500/20 transition-all">
+                                    <div className="relative flex-1">
+                                        <Search size={18} className="text-slate-300 absolute left-3 top-1/2 -translate-y-1/2" />
+                                        <input
+                                            type="text"
+                                            value={searchId}
+                                            onChange={(e) => setSearchId(e.target.value)}
+                                            placeholder="Consultar ID en bus nacional..."
+                                            className="pl-10 pr-4 py-2.5 bg-transparent border-none text-sm text-slate-700 font-medium focus:outline-none placeholder:text-slate-300 w-64"
+                                        />
+                                    </div>
+                                    <button 
+                                        type="button" 
+                                        onClick={handleFetchHistory}
+                                        disabled={fetchingHistory}
+                                        className="bg-slate-900 text-white px-4 py-2.5 text-xs font-bold hover:bg-slate-800 transition-all flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        {fetchingHistory ? <Loader2 size={14} className="animate-spin" /> : <History size={14} />}
+                                        Consultar IHCE
+                                    </button>
+                                </div>
+                                <button type="button" className="relative p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-all">
+                                    <Bell size={18} className="text-slate-500" />
+                                    <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border border-white"></span>
+                                </button>
                             </div>
-                            <button type="button" className="relative p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-all">
-                                <Bell size={18} className="text-slate-500" />
-                                <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border border-white"></span>
-                            </button>
-                        </div>
-                    </header>
+                        </header>
 
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto p-10">
