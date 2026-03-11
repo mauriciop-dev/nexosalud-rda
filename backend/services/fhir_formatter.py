@@ -156,7 +156,13 @@ class FHIRFormatter:
             procedure_refs.append({"reference": f"Procedure/{pid}"})
 
         # ── 6. Recurso Composition ──
+        clinical_summary = data.get("summary") or "Resumen no disponible"
+        
         sections = [{
+            "title": "Resumen Clínico",
+            "code": {"text": "Resumen"},
+            "text": {"status": "generated", "div": f"<div xmlns=\"http://www.w3.org/1999/xhtml\">{clinical_summary}</div>"}
+        }, {
             "title": "Diagnósticos y Hallazgos Clínicos",
             "code": {"text": "Diagnósticos"},
             "entry": condition_refs if condition_refs else []

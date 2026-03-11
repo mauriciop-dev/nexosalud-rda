@@ -24,6 +24,7 @@ Required fields (use null if not found):
 - patient_name: string
 - patient_id: string (document number)
 - patient_id_type: string (CC, TI, etc)
+- summary: string (short and professional summary of the consultation, max 2 sentences)
 - attention_date: string (YYYY-MM-DD format)
 - diagnoses: array of objects with "code" (ICD-10) and "description"
 - medications: array of objects with "name", "dose", "frequency"

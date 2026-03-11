@@ -64,6 +64,9 @@ function RDASuccessModal({
     const patientDoc = patientRes?.identifier?.[0]?.value;
     const attentionDate = compositionRes?.date?.substring(0, 10) || '';
 
+    // Extraer resumen clínico de la sección "Resumen Clínico"
+    const clinicalSummary = compositionRes?.section?.find((s: any) => s.title === 'Resumen Clínico')?.text?.div?.replace(/<[^>]*>/g, '');
+
     const copyCode = () => {
         navigator.clipboard.writeText(codigoVida);
         setCopied(true);
@@ -113,6 +116,19 @@ function RDASuccessModal({
                             {patientDoc && <p className="text-slate-400 text-xs font-medium mt-0.5">CC {patientDoc}{attentionDate ? ` · ${attentionDate}` : ''}</p>}
                         </div>
                     </div>
+
+                    {/* Resumen Clínico IA */}
+                    {clinicalSummary && (
+                        <div className="p-5 bg-teal-50/50 border border-teal-100 rounded-[1.5rem] relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                                <Sparkles size={40} className="text-teal-600" />
+                            </div>
+                            <p className="text-[10px] uppercase font-black text-teal-600 tracking-widest mb-2 relative z-10">Resumen Clínico por IA</p>
+                            <p className="text-sm font-medium text-slate-700 leading-relaxed relative z-10 italic">
+                                "{clinicalSummary}"
+                            </p>
+                        </div>
+                    )}
 
                     {/* Diagnoses */}
                     {conditions.length > 0 && (
