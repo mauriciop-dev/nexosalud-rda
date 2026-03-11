@@ -34,7 +34,9 @@ Medical text:
 
 Return ONLY a valid JSON object, nothing else. No markdown, no explanation."""
 
-        if motor == "groq" and self.groq_api_key:
+        if motor == "groq":
+            if not self.groq_api_key:
+                return {"error": "GROQ_API_KEY no está configurada en Render. Por favor agrégala en las Environment Variables."}
             return await self._extract_with_groq(prompt)
         else:
             return await self._extract_with_ollama(prompt)
