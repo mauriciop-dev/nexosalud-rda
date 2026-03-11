@@ -104,6 +104,7 @@ async def extract_rda(payload: ExtractRequest):
             "patient_doc_number": str(extracted_data.get("patient_id", "00000000")),
             "codigo_vida": result_minsalud.get("codigo_vida"),
             "fhir_bundle": json.loads(fhir_json),
+            "fhir_payload": json.loads(fhir_json), # Dual-populate for backward compatibility
             "raw_text": payload.text
         }
         await db.save_rda(db_record)
