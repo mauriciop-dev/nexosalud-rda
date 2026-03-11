@@ -335,14 +335,18 @@ export default function DashboardPage() {
                     const bundle = record.fhir_payload;
                     const patientRes = bundle?.entry?.find((e: any) => e.resource?.resourceType === 'Patient')?.resource;
                     const compositionRes = bundle?.entry?.find((e: any) => e.resource?.resourceType === 'Composition')?.resource;
-                    const pName = patientRes?.name?.[0]?.text || 'Paciente';
+                    const pName = record.patient_name || patientRes?.name?.[0]?.text || 'Paciente';
                     const attDate = compositionRes?.date?.substring(0, 10) || record.created_at?.substring(0, 10) || new Date().toISOString().substring(0, 10);
+
+                    // Determinar tipo basado en Composition si existe
+                    const category = compositionRes?.type?.coding?.[0]?.display?.toUpperCase() || 'CONSULTA';
+                    const color = category.includes('URGENCIAS') ? 'red' : category.includes('CONTROL') ? 'green' : 'blue';
 
                     return {
                         p: pName,
                         f: attDate,
-                        t: 'CONSULTA',
-                        color: 'blue',
+                        t: category,
+                        color: color,
                         id: record.codigo_vida || '-',
                         isReal: true
                     };
@@ -625,12 +629,8 @@ export default function DashboardPage() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
-                                            {[
-                                                ...processedRecords,
-                                                { p: 'Juan Pérez', f: '2025-03-09', t: 'URGENCIAS', color: 'red', id: 'VIDA-8821' },
-                                                { p: 'María García', f: '2025-03-09', t: 'CONSULTA', color: 'blue', id: 'VIDA-9012' },
-                                                { p: 'Carlos Ruiz', f: '2025-03-08', t: 'CONTROL', color: 'green', id: 'VIDA-7734' },
-                                            ].map((row, i) => (
+                                        {processedRecords.length > 0 ? (
+                                            processedRecords.map((row, i) => (
                                                 <tr key={i} className={`hover:bg-slate-50/30 transition-colors group ${'isReal' in row && row.isReal ? 'border-l-4 border-l-primary' : ''}`}>
                                                     <td className="px-8 py-5">
                                                         <div className="flex items-center gap-3">
@@ -653,7 +653,14 @@ export default function DashboardPage() {
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            ))}
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={4} className="px-8 py-20 text-center text-slate-400 font-medium italic">
+                                                    No hay atenciones recientes procesadas.
+                                                </td>
+                                            </tr>
+                                        )}
                                         </tbody>
                                     </table>
                                 </div>

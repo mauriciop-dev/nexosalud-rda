@@ -122,10 +122,15 @@ async def extract_rda(payload: ExtractRequest):
 @app.get("/recent-rda")
 async def get_recent_rda(tenant_id: Optional[str] = None):
     try:
-        data = await db.get_recent_rda(tenant_id=tenant_id)
-        # Handle Supabase response structure (data property contains the list)
-        if hasattr(data, 'data'):
-            return data.data
-        return data
+        response = await db.get_recent_rda(tenant_id=tenant_id)
+        
+        # Extraemos la lista de datos del objeto de respuesta de Supabase
+        records = response.data if hasattr(response, 'data') else response
+        
+        return {
+            "status": "success",
+            "data": records
+        }
     except Exception as e:
+        print(f"❌ Error obteniendo registros: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
