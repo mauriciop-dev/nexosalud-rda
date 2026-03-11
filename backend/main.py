@@ -46,9 +46,9 @@ async def extract_rda(payload: ExtractRequest):
         raise HTTPException(status_code=400, detail="Text is required")
     
     try:
-        # 1. Extracción con IA Local (Llama 3.1)
-        print("Paso 1: Extrayendo datos con IA...")
-        extracted_data = await extractor.extract_data(payload.text)
+        # 1. Extracción con IA (Llama 3.1 o Groq)
+        print(f"Paso 1: Extrayendo datos con IA ({payload.motor})...")
+        extracted_data = await extractor.extract_data(payload.text, motor=payload.motor)
         if "error" in extracted_data:
             raise Exception(f"IA Error: {extracted_data['error']}")
 
