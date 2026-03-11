@@ -216,7 +216,7 @@ export default function Dashboard() {
     const [codigoVida, setCodigoVida] = useState<string | null>(null);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [user, setUser] = useState<any>(null);
-    const [motor, setMotor] = useState<'llama3.1' | 'groq'>('llama3.1');
+    const [motor, setMotor] = useState<'llama3.1' | 'groq'>('groq');
     const [processedRecords, setProcessedRecords] = useState<Array<{
         p: string; f: string; t: string; color: string; id: string; isReal?: boolean;
     }>>([]);
