@@ -520,7 +520,7 @@ export default function DashboardPage() {
                                             type="text"
                                             value={searchId}
                                             onChange={(e) => setSearchId(e.target.value)}
-                                            placeholder="Consultar ID en bus nacional..."
+                                            placeholder="Consultar ID Paciente (CC/TI)..."
                                             className="pl-10 pr-4 py-2.5 bg-transparent border-none text-sm text-slate-700 font-medium focus:outline-none placeholder:text-slate-300 w-64"
                                         />
                                     </div>
