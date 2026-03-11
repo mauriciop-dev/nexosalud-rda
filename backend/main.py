@@ -80,10 +80,13 @@ async def extract_rda(payload: ExtractRequest):
 
         # 4. Persistencia en Base de Datos (Supabase o Local)
         print("Paso 4: Guardando en Base de Datos...")
+        # Aseguramos que tenant_id sea un UUID válido o None para evitar errores en BD
+        tid = payload.tenant_id if payload.tenant_id and payload.tenant_id != "default" else None
+        
         db_record = {
-            "tenant_id": payload.tenant_id or "default",
+            "tenant_id": tid,
             "patient_name": extracted_data.get("patient_name", "Desconocido"),
-            "patient_id": extracted_data.get("patient_id", "00000000"),
+            "patient_doc_number": str(extracted_data.get("patient_id", "00000000")),
             "codigo_vida": result_minsalud.get("codigo_vida"),
             "fhir_bundle": json.loads(fhir_json),
             "raw_text": payload.text
