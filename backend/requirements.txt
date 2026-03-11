@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+gunicorn
+supabase
+python-dotenv
+fhir.resources
+pydantic
+pydantic-settings
+python-multipart
+httpx
+psycopg2-binary

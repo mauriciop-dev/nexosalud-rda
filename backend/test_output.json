@@ -1,0 +1,93 @@
+{
+  "id": "4e4267ed-6fdb-4d36-8a9b-9980894152b8",
+  "type": "document",
+  "entry": [
+    {
+      "resource": {
+        "id": "597b656a-16ef-4ec5-8aff-1474ab974429",
+        "date": "2026-03-10T03:02:38+00:00",
+        "type": {
+          "text": "Resumen Digital de Atenci\u00f3n (RDA) - Resoluci\u00f3n 1888",
+          "coding": [
+            {
+              "code": "11506-3",
+              "system": "http://loinc.org",
+              "display": "Progress note"
+            }
+          ]
+        },
+        "title": "RDA - Pedro Castro - 2025-05-15",
+        "author": [
+          {
+            "display": "Sistema NexoSalud RDA v1.0"
+          }
+        ],
+        "status": "final",
+        "section": [
+          {
+            "code": {
+              "text": "Diagn\u00f3sticos"
+            },
+            "entry": [
+              {
+                "reference": "Condition/30f8b029-6ea5-4d64-a8bf-d2ea04786a80"
+              }
+            ],
+            "title": "Diagn\u00f3sticos y Hallazgos Cl\u00ednicos"
+          }
+        ],
+        "subject": {
+          "reference": "Patient/62debdbe-91a5-4466-80ad-3e87475639a6"
+        },
+        "resourceType": "Composition"
+      }
+    },
+    {
+      "resource": {
+        "id": "62debdbe-91a5-4466-80ad-3e87475639a6",
+        "name": [
+          {
+            "text": "Pedro Castro"
+          }
+        ],
+        "active": true,
+        "identifier": [
+          {
+            "value": "1234567",
+            "system": "http://minsalud.gov.co/interoperabilidad/identificacion"
+          }
+        ],
+        "resourceType": "Patient"
+      }
+    },
+    {
+      "resource": {
+        "id": "30f8b029-6ea5-4d64-a8bf-d2ea04786a80",
+        "code": {
+          "text": "Apendicitis",
+          "coding": [
+            {
+              "code": "K35",
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "display": "Apendicitis"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/62debdbe-91a5-4466-80ad-3e87475639a6"
+        },
+        "resourceType": "Condition",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active",
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "timestamp": "2026-03-10T03:02:38+00:00",
+  "resourceType": "Bundle"
+}

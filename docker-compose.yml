@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: nexosalud-db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=nexosalud_rda
+    ports:
+      - "5432:5432"
+    volumes:
+      - nexosalud-db-data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: nexosalud-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - APP_MODE=enterprise
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/nexosalud_rda
+      - OLLAMA_URL=http://ollama:11434/api/generate
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+    networks:
+      - nexo-network
+
+  frontend:
+    build: ./app
+    container_name: nexosalud-frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./app/.env.local
+    volumes:
+      - ./app:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
+    networks:
+      - nexo-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: nexosalud-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-storage:/root/.ollama
+    networks:
+      - nexo-network
+
+networks:
+  nexo-network:
+    driver: bridge
+
+volumes:
+  nexosalud-db-data:
+  ollama-storage:
