@@ -303,7 +303,9 @@ export default function Dashboard() {
                 body: JSON.stringify({
                     text: extractText,
                     tenant_id: user?.id,
-                    motor: motor
+                    motor: motor,
+                    reps_code: "110011234501", // Default Mock REPS
+                    patient_id_type: "CC"      // Default Mock ID Type
                 }),
             });
             const result = await response.json();
