@@ -41,6 +41,13 @@ class ExtractRequest(BaseModel):
     reps_code: Optional[str] = "110011234501" # Mock REPS (12 digits)
     patient_id_type: Optional[str] = "CC"     # Default to CC
 
+class AuditLogRequest(BaseModel):
+    user_email: Optional[str] = None
+    action: str
+    resource: Optional[str] = None
+    details: Optional[dict] = None
+    tenant_id: Optional[str] = None
+
 @app.get("/")
 async def root():
     return {"status": "ok", "message": "NexoSalud RDA Backend is running"}
@@ -133,4 +140,21 @@ async def get_recent_rda(tenant_id: Optional[str] = None):
         }
     except Exception as e:
         print(f"❌ Error obteniendo registros: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/audit-log")
+async def save_audit_log(payload: AuditLogRequest):
+    try:
+        tid = payload.tenant_id if payload.tenant_id and payload.tenant_id != "default" else None
+        log_data = {
+            "user_email": payload.user_email,
+            "action": payload.action,
+            "resource": payload.resource,
+            "details": payload.details,
+            "tenant_id": tid
+        }
+        await db.save_audit_log(log_data)
+        return {"status": "success"}
+    except Exception as e:
+        print(f"❌ Error guardando auditoría: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

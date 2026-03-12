@@ -18,3 +18,6 @@ class SupabaseDatabase(BaseDatabase):
         if tenant_id:
             query = query.eq("tenant_id", tenant_id)
         return query.order("created_at", desc=True).limit(limit).execute()
+
+    async def save_audit_log(self, data: dict):
+        return self.client.table("audit_logs").insert(data).execute()
