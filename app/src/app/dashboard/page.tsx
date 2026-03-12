@@ -517,8 +517,13 @@ export default function DashboardPage() {
                 logAction('Extracción Exitosa', `Paciente: ${patientName}`);
                 
                 setLastSubmissionStatus('success');
-                setExtractionStep(5);
-                setExtractionProgress(100);
+                setExtractionStep(4); // Generando y firmando...
+                setExtractionProgress(95);
+                
+                setTimeout(() => {
+                    setExtractionStep(5);
+                    setExtractionProgress(100);
+                }, 400);
                 
                 setLastExtracted(bundle);
                 setCodigoVida(result.codigo_vida);
@@ -540,6 +545,32 @@ export default function DashboardPage() {
             setLastErrorDetail(error.message);
             setExtracting(false);
             logAction('Error de Extracción', error.message);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files[0];
+        if (file && file.type === 'text/plain') {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                setExtractText(event.target?.result as string);
+                logAction('Carga de Archivo', file.name);
+            };
+            reader.readAsText(file);
+        } else {
+            alert('⚠️ Solo se permiten archivos de texto (.txt)');
         }
     };
 
@@ -828,9 +859,14 @@ export default function DashboardPage() {
                             </div>
 
                             {/* Extractor Widget */}
-                            <div className="lg:col-span-4 bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden group">
+                            <div 
+                                className={`lg:col-span-4 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden group transition-all duration-300 ${isDragging ? 'bg-teal-900 border-4 border-dashed border-teal-500/50' : 'bg-slate-900'}`}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                            >
                                 <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-                                    <Bot size={120} />
+                                    {isDragging ? <Download size={120} /> : <Bot size={120} />}
                                 </div>
                                 
                                 <div className="relative z-10">
