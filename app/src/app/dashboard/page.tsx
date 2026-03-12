@@ -39,7 +39,9 @@ import {
     ShieldCheck,
     History,
     ListTree,
-    Building
+    Building,
+    Hash,
+    Download
 } from 'lucide-react';
 
 // Using some standard lucide icons if the specific ones above don't exist
@@ -428,13 +430,17 @@ export default function DashboardPage() {
                     const category = compositionRes?.type?.coding?.[0]?.display?.toUpperCase() || 'CONSULTA';
                     const color = category.includes('URGENCIAS') ? 'red' : category.includes('CONTROL') ? 'green' : 'blue';
 
+                    const patientId = patientRes?.identifier?.[0]?.value || 'CC No Registrada';
+
                     return {
                         p: pName,
                         f: attDate,
                         t: category,
                         color: color,
                         id: record.codigo_vida || '-',
-                        isReal: true
+                        patient_id: patientId,
+                        isReal: true,
+                        bundle: bundle
                     };
                 });
                 setProcessedRecords(formatted);
@@ -918,17 +924,17 @@ export default function DashboardPage() {
                                                         return (
                                                             <tr key={i} className="hover:bg-slate-50/20 transition-colors group">
                                                                 <td className="px-8 py-5 font-bold text-slate-700 text-sm">{name}</td>
-                                                                <td className="px-6 py-5 text-sm text-slate-500 font-mono">CC {Math.floor(Math.random() * 1000000000)}</td>
+                                                                <td className="px-6 py-5 text-sm text-slate-500 font-mono">{lastRecord.patient_id || 'CC Desconocida'}</td>
                                                                 <td className="px-6 py-5 text-sm text-slate-500">{lastRecord.f}</td>
                                                                 <td className="px-8 py-5 text-right">
                                                                     <button 
                                                                         onClick={() => {
-                                                                            setSearchId('123456'); // Mock ID for demo
+                                                                            setSearchId(lastRecord.patient_id || '');
                                                                             handleFetchHistory();
                                                                         }}
                                                                         className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-xl transition-all"
                                                                     >
-                                                                        <History size={18} />
+                                                                        <Hash size={18} />
                                                                     </button>
                                                                 </td>
                                                             </tr>
@@ -973,12 +979,33 @@ export default function DashboardPage() {
                                                         <td className="px-6 py-5">
                                                             <span className="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase">Sincronizado</span>
                                                         </td>
-                                                        <td className="px-8 py-5 text-right">
+                                                        <td className="px-8 py-5 text-right flex justify-end gap-2">
                                                             <button 
-                                                                onClick={() => logAction('Visualizar Bundle', `Transacción: ${r.id}`)}
+                                                                onClick={() => {
+                                                                    logAction('Visualizar Bundle', `Transacción: ${r.id}`);
+                                                                    setLastExtracted(r.bundle);
+                                                                    setCodigoVida(r.id);
+                                                                    setShowSuccessModal(true);
+                                                                }}
                                                                 className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                                title="Ver FHIR Bundle"
                                                             >
                                                                 <FileText size={18} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    logAction('Descarga RDA', `Transacción: ${r.id}`, { format: 'JSON/FHIR' });
+                                                                    const blob = new Blob([JSON.stringify(r.bundle, null, 2)], { type: 'application/json' });
+                                                                    const url = URL.createObjectURL(blob);
+                                                                    const a = document.createElement('a');
+                                                                    a.href = url;
+                                                                    a.download = `RDA-${r.id}.json`;
+                                                                    a.click();
+                                                                }}
+                                                                className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-xl transition-all"
+                                                                title="Descargar RDA"
+                                                            >
+                                                                <Download size={18} />
                                                             </button>
                                                         </td>
                                                     </tr>
@@ -1017,7 +1044,10 @@ export default function DashboardPage() {
                                                         </div>
                                                         <div>
                                                             <p className="text-sm font-bold text-slate-700">{log.action}: <span className="font-medium text-slate-500">{log.resource}</span></p>
-                                                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{log.user} • {new Date(log.timestamp).toLocaleString()}</p>
+                                                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                                                                {log.user} • {new Date(log.timestamp).toLocaleString()}
+                                                                {log.details && Object.keys(log.details).length > 0 && ` • ${JSON.stringify(log.details)}`}
+                                                            </p>
                                                         </div>
                                                     </div>
                                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity">
