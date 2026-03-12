@@ -477,22 +477,20 @@ export default function DashboardPage() {
     const loadRecords = async () => {
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-            const response = await fetch(`${apiUrl}/recent-rda`);
+            const tid = user?.id || 'default';
+            const response = await fetch(`${apiUrl}/dashboard/recent-records?tenant_id=${tid}`);
             const result = await response.json();
 
             if (result.status === 'success' && result.data) {
                 const formatted = result.data.map((record: any) => {
-                    const bundle = record.fhir_payload;
-                    const patientRes = bundle?.entry?.find((e: any) => e.resource?.resourceType === 'Patient')?.resource;
-                    const compositionRes = bundle?.entry?.find((e: any) => e.resource?.resourceType === 'Composition')?.resource;
-                    const pName = record.patient_name || patientRes?.name?.[0]?.text || 'Paciente';
-                    const attDate = compositionRes?.date?.substring(0, 10) || record.created_at?.substring(0, 10) || new Date().toISOString().substring(0, 10);
-
-                    // Determinar tipo basado en Composition si existe
-                    const category = compositionRes?.type?.coding?.[0]?.display?.toUpperCase() || 'CONSULTA';
+                    const bundle = record.json_fhir;
+                    const patientInfo = record.patients || {};
+                    const pName = patientInfo.nombre_completo || 'Paciente';
+                    const patientId = patientInfo.documento || 'CC No Registrada';
+                    
+                    const attDate = record.fecha_atencion?.substring(0, 10) || record.created_at?.substring(0, 10) || new Date().toISOString().substring(0, 10);
+                    const category = record.tipo_rda?.toUpperCase() || 'CONSULTA';
                     const color = category.includes('URGENCIAS') ? 'red' : category.includes('CONTROL') ? 'green' : 'blue';
-
-                    const patientId = patientRes?.identifier?.[0]?.value || 'CC No Registrada';
 
                     return {
                         p: pName,
