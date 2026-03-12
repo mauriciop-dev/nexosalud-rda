@@ -14,6 +14,9 @@ from typing import Optional
 
 app = FastAPI(title="NexoSalud RDA API")
 
+# Identificador por defecto para Dr. Ricardo Rivas (Simulado/Tenant)
+DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001"
+
 # Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
@@ -100,21 +103,34 @@ async def extract_rda(payload: ExtractRequest):
         print("Paso 3: Enviando a MinSalud...")
         result_minsalud = await minsalud.send_rda(fhir_json)
 
-        # 4. Persistencia en Base de Datos (Supabase o Local)
-        print("Paso 4: Guardando en Base de Datos...")
-        # Aseguramos que tenant_id sea un UUID válido o None para evitar errores en BD
-        tid = payload.tenant_id if payload.tenant_id and payload.tenant_id != "default" else None
+        # 4. Persistencia en Base de Datos (Supabase)
+        print("Paso 4: Persistencia en Tablas Patients & RDA_Records...")
+        # Aseguramos un tenant_id base para cumplir con la segregación
+        tid = payload.tenant_id if payload.tenant_id and payload.tenant_id != "default" else DEFAULT_TENANT_ID
         
-        db_record = {
-            "tenant_id": tid,
-            "patient_name": extracted_data.get("patient_name", "Desconocido"),
-            "patient_doc_number": str(extracted_data.get("patient_id", "00000000")),
-            "codigo_vida": result_minsalud.get("codigo_vida"),
-            "fhir_bundle": json.loads(fhir_json),
-            "fhir_payload": json.loads(fhir_json), # Dual-populate for backward compatibility
-            "raw_text": payload.text
+        # 4.1 Upsert Patient
+        patient_data = {
+            "tipo_documento": payload.patient_id_type,
+            "documento": str(extracted_data.get("patient_id", "00000000")),
+            "nombre_completo": extracted_data.get("patient_name", "Desconocido"),
+            "tenant_id": tid
         }
-        await db.save_rda(db_record)
+        # Para evitar problemas de tipos, nos aseguramos que patient_id_type y patient_id existan
+        patient_id = await db.upsert_patient(patient_data)
+        
+        # 4.2 Save RDA Record vinculado al id del paciente
+        rda_record = {
+            "patient_id": patient_id,
+            "tipo_rda": extracted_data.get("tipo_atencion", "Consulta"),
+            "json_fhir": json.loads(fhir_json),
+            "codigo_vida": result_minsalud.get("codigo_vida"),
+            "estado_envio": "Exitoso" if result_minsalud.get("codigo_vida") else "Pendiente",
+            "tenant_id": tid
+        }
+        await db.save_rda_record(rda_record)
+
+        # Mantenemos compatibilidad con el registro antiguo si es necesario (opcional)
+        # await db.save_rda(db_record) 
 
         return {
             "status": "success",
@@ -140,6 +156,32 @@ async def get_recent_rda(tenant_id: Optional[str] = None):
         }
     except Exception as e:
         print(f"❌ Error obteniendo registros: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/dashboard/recent-records")
+async def dashboard_recent_records(tenant_id: Optional[str] = None):
+    """
+    Endpoint optimizado para el Dashboard: devuelve RDA joined con Patients.
+    """
+    try:
+        tid = tenant_id if tenant_id and tenant_id != "default" else DEFAULT_TENANT_ID
+        response = await db.get_recent_records_with_patients(tenant_id=tid)
+        
+        # Manejo robusto de la respuesta de Supabase
+        records = []
+        if hasattr(response, 'data'):
+            records = response.data
+        elif isinstance(response, list):
+            records = response
+        elif isinstance(response, dict) and 'data' in response:
+            records = response['data']
+
+        return {
+            "status": "success",
+            "data": records
+        }
+    except Exception as e:
+        print(f"❌ Error en dashboard API: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/audit-log")
