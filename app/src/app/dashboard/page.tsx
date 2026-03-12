@@ -385,6 +385,7 @@ export default function DashboardPage() {
     const [lastErrorDetail, setLastErrorDetail] = useState<string | null>(null);
     const [extractionStep, setExtractionStep] = useState(0);
     const [extractionProgress, setExtractionProgress] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
 
     const logAction = (action: string, resource: string, details: any = {}) => {
         const newLog = {
@@ -444,6 +445,15 @@ export default function DashboardPage() {
                     };
                 });
                 setProcessedRecords(formatted);
+                
+                // Sync latest success state to KPI Card
+                if (formatted.length > 0) {
+                    const latest = formatted[0];
+                    if (latest.id && latest.id !== '-') {
+                        setCodigoVida(latest.id);
+                        setLastSubmissionStatus('success');
+                    }
+                }
             }
         } catch (e) {
             console.error("Error loading records", e);
