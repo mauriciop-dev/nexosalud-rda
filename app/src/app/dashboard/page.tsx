@@ -292,6 +292,66 @@ function ClinicalTimelineModal({
     );
 }
 
+// ─── Normative Checklist Modal ───────────────────────────────────────────────
+function NormativeChecklistModal({ onClose }: { onClose: () => void }) {
+    const checklist = [
+        { title: "HL7 FHIR R4 Bundle", desc: "Tipo 'transaction' con perfiles VULCANO.", status: "ok" },
+        { title: "Recurso Composition", desc: "Sección obligatoria de Resumen Clínico CO.", status: "ok" },
+        { title: "Firma Digital JWS", desc: "Algoritmo RS256 con certificado .p12.", status: "ok" },
+        { title: "Catálogo CIE-10", desc: "Códigos de diagnóstico normalizados.", status: "ok" },
+        { title: "Catálogo CUM/CUPS", desc: "Medicamentos y procedimientos validados.", status: "ok" },
+        { title: "Extensiones CO", desc: "ID de paciente y código REPS de la IPS.", status: "ok" }
+    ];
+
+    return (
+        <div 
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-md w-full p-10 relative animate-in zoom-in-95 duration-200">
+                <button 
+                    onClick={onClose}
+                    className="absolute top-8 right-8 p-2 text-slate-300 hover:text-slate-900 transition-colors"
+                >
+                    <X size={20} />
+                </button>
+
+                <div className="flex items-center gap-4 mb-8">
+                    <div className="bg-indigo-50 text-indigo-600 p-4 rounded-3xl">
+                        <ShieldCheck size={32} />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-black text-slate-900">Requisitos Técnicos</h3>
+                        <p className="text-sm text-slate-400 font-medium">Cumplimiento Resolución 1888/2024</p>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    {checklist.map((item, i) => (
+                        <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100/50">
+                            <div className="flex items-center gap-3">
+                                <div className="size-2 bg-emerald-500 rounded-full"></div>
+                                <div>
+                                    <p className="text-sm font-bold text-slate-700">{item.title}</p>
+                                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{item.desc}</p>
+                                </div>
+                            </div>
+                            <CheckCircle2 size={16} className="text-emerald-500" />
+                        </div>
+                    ))}
+                </div>
+
+                <button 
+                    onClick={onClose}
+                    className="w-full mt-10 bg-slate-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20"
+                >
+                    Entendido
+                </button>
+            </div>
+        </div>
+    );
+}
+
 type ViewType = 'dashboard' | 'pacientes' | 'envios' | 'auditoria';
 
 // ─── Main Dashboard Component ────────────────────────────────────────────────
@@ -316,6 +376,13 @@ export default function DashboardPage() {
     // FASE 7: Navegación y Auditoría
     const [currentView, setCurrentView] = useState<ViewType>('dashboard');
     const [auditLogs, setAuditLogs] = useState<any[]>([]);
+    
+    // FASE 8: UI/UX & Feedback Real-time
+    const [showNormativeModal, setShowNormativeModal] = useState(false);
+    const [lastSubmissionStatus, setLastSubmissionStatus] = useState<'success' | 'error' | 'none'>('none');
+    const [lastErrorDetail, setLastErrorDetail] = useState<string | null>(null);
+    const [extractionStep, setExtractionStep] = useState(0);
+    const [extractionProgress, setExtractionProgress] = useState(0);
 
     const logAction = (action: string, resource: string, details: any = {}) => {
         const newLog = {
@@ -391,6 +458,22 @@ export default function DashboardPage() {
         setExtracting(true);
         setLastExtracted(null);
         setCodigoVida(null);
+        setExtractionStep(1);
+        setExtractionProgress(10);
+        setLastSubmissionStatus('none');
+
+        // Simulación de pasos iniciales para feedback visual
+        const steps = [
+            { s: 1, p: 20 }, // Analizando...
+            { s: 2, p: 45 }, // Identificando...
+            { s: 3, p: 70 }, // Mapeando...
+        ];
+
+        for (const step of steps) {
+            await new Promise(r => setTimeout(r, 800));
+            setExtractionStep(step.s);
+            setExtractionProgress(step.p);
+        }
 
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -405,28 +488,42 @@ export default function DashboardPage() {
                     patient_id_type: "CC"      // Default Mock ID Type
                 }),
             });
+            
+            setExtractionStep(4); // Generando y firmando...
+            setExtractionProgress(90);
+
             const result = await response.json();
             if (result.status === 'success') {
                 const bundle = result.fhir_bundle;
                 const patientResource = bundle?.entry?.find((e: any) => e.resource?.resourceType === 'Patient')?.resource;
-                const compositionResource = bundle?.entry?.find((e: any) => e.resource?.resourceType === 'Composition')?.resource;
                 const patientName = patientResource?.name?.[0]?.text || 'Paciente Procesado';
                 
                 logAction('Extracción Exitosa', `Paciente: ${patientName}`);
-                const attentionDate = compositionResource?.date?.substring(0, 10) || new Date().toISOString().substring(0, 10);
-
+                
+                setLastSubmissionStatus('success');
+                setExtractionStep(5);
+                setExtractionProgress(100);
+                
                 setLastExtracted(bundle);
                 setCodigoVida(result.codigo_vida);
-                setShowSuccessModal(true);
-                await loadRecords(); // Refresh the table from Supabase!
+                
+                setTimeout(() => {
+                    setShowSuccessModal(true);
+                    setExtracting(false);
+                }, 500);
+
+                await loadRecords(); // Refresh the table
             } else {
-                alert('Error en Pipeline: ' + (result.detail || 'Fallo desconocido'));
+                setLastSubmissionStatus('error');
+                setLastErrorDetail(result.message || 'Error en la extracción');
+                setExtracting(false);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error:', error);
-            alert('Error de conexión con el Backend (Verifica que Docker esté corriendo)');
-        } finally {
+            setLastSubmissionStatus('error');
+            setLastErrorDetail(error.message);
             setExtracting(false);
+            logAction('Error de Extracción', error.message);
         }
     };
 
@@ -575,21 +672,35 @@ export default function DashboardPage() {
                         {currentView === 'dashboard' && (
                             <>
                                 {/* Stats Cards */}
-                        <section className="grid grid-cols-3 gap-6 mb-10">
-                            {/* Código VIDA */}
-                            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-7 flex items-center justify-between group hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all">
-                                <div>
-                                    <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-3">Último Código VIDA</p>
-                                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter">{codigoVida || 'Pendiente'}</h3>
-                                    <div className="flex items-center gap-1.5 mt-4 bg-emerald-50 text-emerald-600 p-1.5 pr-3 rounded-full w-fit">
-                                        <CheckCircle2 size={16} />
-                                        <span className="text-[10px] uppercase font-black tracking-wider">{codigoVida ? 'Sincronizado' : 'En cola'}</span>
+                                <section className="grid grid-cols-3 gap-6 mb-10">
+                                    {/* Código VIDA */}
+                                    <div className={`bg-white rounded-[2rem] border ${lastSubmissionStatus === 'error' ? 'border-red-200 bg-red-50/10' : 'border-slate-100'} shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-7 flex items-center justify-between group hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all`}>
+                                        <div>
+                                            <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-3">Último Código VIDA</p>
+                                            <h3 className={`text-2xl font-black tracking-tighter ${lastSubmissionStatus === 'error' ? 'text-red-600' : 'text-slate-900'}`}>
+                                                {lastSubmissionStatus === 'error' ? 'Error Técnico' : (codigoVida || 'Pendiente')}
+                                            </h3>
+                                            <div className="flex items-center gap-1.5 mt-4">
+                                                {lastSubmissionStatus === 'error' ? (
+                                                    <button 
+                                                        onClick={() => alert(`Error: ${lastErrorDetail}`)}
+                                                        className="bg-red-100 text-red-600 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 hover:bg-red-200 transition-all"
+                                                    >
+                                                        <AlertTriangle size={14} />
+                                                        Ver error técnico
+                                                    </button>
+                                                ) : (
+                                                    <div className={`flex items-center gap-1.5 p-1.5 pr-3 rounded-full w-fit ${codigoVida ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+                                                        <CheckCircle2 size={16} />
+                                                        <span className="text-[10px] uppercase font-black tracking-wider">{codigoVida ? 'Sincronizado' : 'En cola'}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className={`p-4 rounded-2xl transition-all ${lastSubmissionStatus === 'error' ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-600'}`}>
+                                            <Network size={32} />
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="bg-slate-50 text-slate-400 p-4 rounded-2xl group-hover:bg-teal-50 group-hover:text-teal-600 transition-all">
-                                    <Network size={32} />
-                                </div>
-                            </div>
 
                             {/* Motor IA */}
                             <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-7 flex items-center justify-between group hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all">
@@ -626,10 +737,13 @@ export default function DashboardPage() {
                                 <div>
                                     <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-3">Normativa Vigente</p>
                                     <h3 className="text-2xl font-black text-slate-900 tracking-tighter">Resolución 1888</h3>
-                                    <div className="flex items-center gap-1.5 mt-4 bg-indigo-50 text-indigo-600 p-1.5 pr-3 rounded-full w-fit">
+                                    <button 
+                                        onClick={() => setShowNormativeModal(true)}
+                                        className="flex items-center gap-1.5 mt-4 bg-indigo-50 text-indigo-600 p-1.5 px-3 rounded-full w-fit hover:bg-indigo-100 transition-all"
+                                    >
                                         <Gavel size={16} />
-                                        <span className="text-[10px] uppercase font-black tracking-wider">Cumplimiento HL7 FHIR</span>
-                                    </div>
+                                        <span className="text-[10px] uppercase font-black tracking-wider">Checklist Técnico</span>
+                                    </button>
                                 </div>
                                 <div className="bg-indigo-50 text-indigo-600 p-4 rounded-2xl">
                                     <ShieldCheck size={32} />
@@ -697,70 +811,56 @@ export default function DashboardPage() {
                                 </div>
                             </div>
 
-                            {/* Extraction Widget */}
-                            <div className="lg:col-span-4 flex flex-col gap-8">
-                                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-[0_24px_48px_rgba(0,0,0,0.02)] p-8 flex flex-col relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-8 opacity-5">
-                                        <FileText size={96} className="text-teal-600 transform rotate-12" />
-                                    </div>
-                                    <div className="mb-8 relative z-10">
-                                        <div className="flex items-center gap-2">
-                                            <FileText className="text-teal-600" size={24} />
-                                            <h3 className="font-black text-slate-800">Carga de Historia Clínica</h3>
-                                        </div>
-                                        <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed">
-                                            El sistema AI extraerá automáticamente datos personales y clínicos cumpliendo con HL7 FHIR.
-                                        </p>
-                                    </div>
+                            {/* Extractor Widget */}
+                            <div className="lg:col-span-4 bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                                    <Bot size={120} />
+                                </div>
+                                
+                                <div className="relative z-10">
+                                    <h3 className="text-xl font-black mb-2 tracking-tight">Procesar Historia</h3>
+                                    <p className="text-slate-400 text-xs font-medium mb-8">Pega el texto clínico para extraer campos FHIR.</p>
+                                    
+                                    <textarea 
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-medium placeholder:text-slate-600 focus:ring-2 focus:ring-teal-500/50 outline-none min-h-[220px] transition-all mb-6"
+                                        placeholder="Ej: Paciente masculino de 45 años..."
+                                        value={extractText}
+                                        onChange={(e) => setExtractText(e.target.value)}
+                                    ></textarea>
 
-                                    <div className="space-y-6 relative z-10">
-                                        <div className="relative">
-                                            <textarea
-                                                value={extractText}
-                                                onChange={(e) => setExtractText(e.target.value)}
-                                                className="w-full h-56 bg-white border-2 border-slate-100 rounded-[2rem] p-6 text-sm font-medium resize-none focus:bg-white focus:border-primary/20 focus:ring-8 focus:ring-primary/5 outline-none transition-all placeholder:text-slate-300 shadow-inner text-slate-900"
-                                                placeholder="Pega aquí el texto de la historia clínica o resumen de atención..."
-                                            />
-                                            <div className="absolute bottom-6 right-6">
-                                                <span className="text-[10px] font-bold text-slate-300 tracking-widest uppercase">Llama 3.1</span>
+                                    {extracting && (
+                                        <div className="mb-6 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="flex justify-between items-end">
+                                                <p className="text-[10px] font-black uppercase text-teal-400 tracking-widest leading-none">
+                                                    {extractionStep === 1 && "Analizando texto clínico..."}
+                                                    {extractionStep === 2 && "Identificando paciente y médicos..."}
+                                                    {extractionStep === 3 && "Mapeando códigos CUPS/CIE-10..."}
+                                                    {extractionStep === 4 && "Generando y firmando Bundle FHIR..."}
+                                                    {extractionStep === 5 && "¡Listo!"}
+                                                </p>
+                                                <span className="text-[10px] font-mono text-slate-500">{extractionProgress}%</span>
+                                            </div>
+                                            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                                <div 
+                                                    className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 transition-all duration-700 ease-out shadow-[0_0_12px_rgba(20,184,166,0.4)]"
+                                                    style={{ width: `${extractionProgress}%` }}
+                                                ></div>
                                             </div>
                                         </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={handleExtract}
-                                            disabled={extracting}
-                                            className="w-full py-4 bg-teal-600 hover:bg-teal-700 text-white rounded-[1.5rem] font-black text-base shadow-xl shadow-teal-600/30 transition-all flex items-center justify-center gap-3 disabled:bg-slate-300 disabled:shadow-none active:scale-[0.98] cursor-pointer"
-                                        >
-                                            {extracting ? (
-                                                <>
-                                                    <Loader2 className="animate-spin" size={20} />
-                                                    Procesando con IA...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Sparkles size={20} />
-                                                    Procesar RDA con IA
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-
-                                    {/* Last processed files */}
-                                    {processedRecords.length > 0 && (
-                                        <div className="mt-8 pt-6 border-t border-slate-100 space-y-3 relative z-10">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Últimos Procesados</p>
-                                            {processedRecords.slice(0, 2).map((r, i) => (
-                                                <div key={i} className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <FileText className="text-slate-400" size={14} />
-                                                        <span className="text-xs font-bold text-slate-600 truncate max-w-[120px]">{r.p}</span>
-                                                    </div>
-                                                    <span className="text-[10px] font-mono font-bold text-teal-600">{r.id}</span>
-                                                </div>
-                                            ))}
-                                        </div>
                                     )}
+
+                                    <button 
+                                        onClick={handleExtract}
+                                        disabled={extracting}
+                                        className="w-full bg-teal-500 hover:bg-teal-400 disabled:bg-slate-800 text-slate-900 font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-teal-500/20 active:scale-95"
+                                    >
+                                        {extracting ? (
+                                            <Loader2 size={18} className="animate-spin text-slate-900" />
+                                        ) : (
+                                            <Sparkles size={18} />
+                                        )}
+                                        <span>{extracting ? 'PROCESANDO...' : 'EXTRAER DATOS RDA'}</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -952,12 +1052,23 @@ export default function DashboardPage() {
                 </main>
             </div>
 
-            {/* ── RDA Success Modal ── */}
+            {/* ── Modals ── */}
             {showSuccessModal && lastExtracted && codigoVida && (
                 <RDASuccessModal
                     bundle={lastExtracted}
                     codigoVida={codigoVida}
                     onClose={() => setShowSuccessModal(false)}
+                />
+            )}
+
+            {showNormativeModal && (
+                <NormativeChecklistModal onClose={() => setShowNormativeModal(false)} />
+            )}
+
+            {showTimeline && (
+                <ClinicalTimelineModal 
+                    data={historicalData} 
+                    onClose={() => setShowTimeline(false)} 
                 />
             )}
         </>
