@@ -1,6 +1,7 @@
 import httpx
 import os
 import json
+import uuid
 
 class MinSaludClient:
     def __init__(self):
@@ -23,10 +24,9 @@ class MinSaludClient:
         print(f"Enviando RDA a MinSalud: {self.endpoint}")
         
         # Retornamos un ID de Trámite simulado (Código VIDA)
-        import uuid
         return {
             "status": "success",
-            "codigo_vida": f"VIDA-{str(uuid.uuid4())[:8].upper()}",
+            "codigo_vida": f"VIDA-{uuid.uuid4().hex[:8].upper()}",
             "mensaje": "Documento validado y recibido por el Bus IHCE"
         }
     async def get_patient_summary(self, patient_id: str):
@@ -36,11 +36,20 @@ class MinSaludClient:
         print(f"📡 Consultando historial nacional para: {patient_id} en {self.endpoint}")
         
         # Simulamos una respuesta del Bus IHCE (Bundle de tipo searchset)
-        # En una implementación real, esto retornaría recursos de múltiples IPS.
         return {
+            "resourceType": "Bundle",
+            "type": "searchset",
             "status": "success",
             "patient_id": patient_id,
             "entry": [
+                {
+                    "resource": {
+                        "resourceType": "Patient",
+                        "id": patient_id,
+                        "name": [{"text": "Paciente Simulado Nacional"}],
+                        "identifier": [{"value": patient_id}]
+                    }
+                },
                 {
                     "fullUrl": "urn:uuid:abc-123",
                     "resource": {
