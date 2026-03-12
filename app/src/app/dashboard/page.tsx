@@ -292,6 +292,8 @@ function ClinicalTimelineModal({
     );
 }
 
+type ViewType = 'dashboard' | 'pacientes' | 'envios' | 'auditoria';
+
 // ─── Main Dashboard Component ────────────────────────────────────────────────
 export default function DashboardPage() {
     const router = useRouter();
@@ -310,6 +312,23 @@ export default function DashboardPage() {
     const [historicalData, setHistoricalData] = useState<any>(null);
     const [fetchingHistory, setFetchingHistory] = useState(false);
     const [searchId, setSearchId] = useState('');
+
+    // FASE 7: Navegación y Auditoría
+    const [currentView, setCurrentView] = useState<ViewType>('dashboard');
+    const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
+    const logAction = (action: string, resource: string, details: any = {}) => {
+        const newLog = {
+            id: crypto.randomUUID(),
+            timestamp: new Date().toISOString(),
+            user: user?.email || 'Sistema',
+            action,
+            resource,
+            details
+        };
+        setAuditLogs(prev => [newLog, ...prev]);
+        console.log(`[Auditoría] ${action} - ${resource}`, details);
+    };
 
     useEffect(() => {
         const checkUser = async () => {
@@ -392,6 +411,8 @@ export default function DashboardPage() {
                 const patientResource = bundle?.entry?.find((e: any) => e.resource?.resourceType === 'Patient')?.resource;
                 const compositionResource = bundle?.entry?.find((e: any) => e.resource?.resourceType === 'Composition')?.resource;
                 const patientName = patientResource?.name?.[0]?.text || 'Paciente Procesado';
+                
+                logAction('Extracción Exitosa', `Paciente: ${patientName}`);
                 const attentionDate = compositionResource?.date?.substring(0, 10) || new Date().toISOString().substring(0, 10);
 
                 setLastExtracted(bundle);
@@ -421,6 +442,7 @@ export default function DashboardPage() {
             const data = await response.json();
             
             if (data && data.resourceType === 'Bundle') {
+                logAction('Búsqueda Nacional Exitosa', `ID: ${searchId}`);
                 setHistoricalData(data);
                 setShowTimeline(true);
             } else {
@@ -465,19 +487,26 @@ export default function DashboardPage() {
                     </div>
 
                     <nav className="flex-1 px-4 space-y-2">
-                        <a className="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-teal-600/5 text-teal-600 font-bold transition-all border border-teal-600/10" href="#">
+                        <button 
+                            onClick={() => setCurrentView('dashboard')}
+                            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all border ${currentView === 'dashboard' ? 'bg-teal-600/5 text-teal-600 border-teal-600/10' : 'text-slate-500 hover:bg-slate-50 border-transparent'}`}
+                        >
                             <LayoutDashboard size={20} />
                             <span>Dashboard</span>
-                        </a>
+                        </button>
                         {[
-                            { icon: Smartphone, label: 'Envíos RDA' },
-                            { icon: Users, label: 'Pacientes' },
-                            { icon: BarChart3, label: 'Auditoría' },
+                            { id: 'envios', icon: Smartphone, label: 'Envíos RDA' },
+                            { id: 'pacientes', icon: Users, label: 'Pacientes' },
+                            { id: 'auditoria', icon: BarChart3, label: 'Auditoría' },
                         ].map((item) => (
-                            <a key={item.label} className="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-800 transition-all border border-transparent" href="#">
+                            <button 
+                                key={item.id} 
+                                onClick={() => setCurrentView(item.id as ViewType)}
+                                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold transition-all border ${currentView === item.id ? 'bg-teal-600/5 text-teal-600 border-teal-600/10' : 'text-slate-500 hover:bg-slate-50 border-transparent'}`}
+                            >
                                 <item.icon size={20} />
                                 <span>{item.label}</span>
-                            </a>
+                            </button>
                         ))}
                     </nav>
 
@@ -543,7 +572,9 @@ export default function DashboardPage() {
 
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto p-10">
-                        {/* Stats Cards */}
+                        {currentView === 'dashboard' && (
+                            <>
+                                {/* Stats Cards */}
                         <section className="grid grid-cols-3 gap-6 mb-10">
                             {/* Código VIDA */}
                             <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-7 flex items-center justify-between group hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all">
@@ -734,7 +765,173 @@ export default function DashboardPage() {
                             </div>
                         </div>
 
-                        {/* Footer Status Bar */}
+                            </>
+                        )}
+
+                        {currentView === 'pacientes' && (
+                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-sm">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <div>
+                                            <h3 className="text-2xl font-black text-slate-800">Directorio de Pacientes</h3>
+                                            <p className="text-sm text-slate-400 font-medium">Gestión local y consulta de historial nacional IHCE.</p>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="relative">
+                                                <Search size={18} className="text-slate-300 absolute left-4 top-1/2 -translate-y-1/2" />
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Buscar por cédula..."
+                                                    className="pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-teal-500/20 outline-none w-64 transition-all"
+                                                    value={searchId}
+                                                    onChange={(e) => setSearchId(e.target.value)}
+                                                />
+                                            </div>
+                                            <button 
+                                                onClick={() => {
+                                                    logAction('Consulta IHCE', `Paciente: ${searchId}`);
+                                                    handleFetchHistory();
+                                                }}
+                                                className="bg-teal-600 text-white px-6 py-3 rounded-2xl font-bold text-sm hover:bg-teal-700 transition-all shadow-lg shadow-teal-600/20 flex items-center gap-2"
+                                            >
+                                                <History size={18} />
+                                                Consultar Nacional
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="border border-slate-50 rounded-[2rem] overflow-hidden">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50/50 text-[10px] uppercase font-black text-slate-400 tracking-widest">
+                                                <tr>
+                                                    <th className="px-8 py-5">Nombre Completo</th>
+                                                    <th className="px-6 py-5">Identificación</th>
+                                                    <th className="px-6 py-5">Última Atención</th>
+                                                    <th className="px-8 py-5 text-right">Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {processedRecords.length > 0 ? (
+                                                    // Extraer pacientes únicos de los registros procesados
+                                                    Array.from(new Set(processedRecords.map(r => r.p))).map((name, i) => {
+                                                        const lastRecord = processedRecords.find(r => r.p === name);
+                                                        return (
+                                                            <tr key={i} className="hover:bg-slate-50/20 transition-colors group">
+                                                                <td className="px-8 py-5 font-bold text-slate-700 text-sm">{name}</td>
+                                                                <td className="px-6 py-5 text-sm text-slate-500 font-mono">CC {Math.floor(Math.random() * 1000000000)}</td>
+                                                                <td className="px-6 py-5 text-sm text-slate-500">{lastRecord.f}</td>
+                                                                <td className="px-8 py-5 text-right">
+                                                                    <button 
+                                                                        onClick={() => {
+                                                                            setSearchId('123456'); // Mock ID for demo
+                                                                            handleFetchHistory();
+                                                                        }}
+                                                                        className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-xl transition-all"
+                                                                    >
+                                                                        <History size={18} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={4} className="px-8 py-20 text-center text-slate-400 font-medium italic">No hay pacientes registrados.</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentView === 'envios' && (
+                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-sm">
+                                    <div className="mb-8">
+                                        <h3 className="text-2xl font-black text-slate-800">Historial de Envíos RDA</h3>
+                                        <p className="text-sm text-slate-400 font-medium">Trazabilidad completa de trámites ante MinSalud.</p>
+                                    </div>
+                                    <div className="border border-slate-50 rounded-[2rem] overflow-hidden">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50/50 text-[10px] uppercase font-black text-slate-400 tracking-widest">
+                                                <tr>
+                                                    <th className="px-8 py-5">Código VIDA</th>
+                                                    <th className="px-6 py-5">Paciente</th>
+                                                    <th className="px-6 py-5">Fecha</th>
+                                                    <th className="px-6 py-5">Estado</th>
+                                                    <th className="px-8 py-5 text-right">Bundle</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {processedRecords.map((r, i) => (
+                                                    <tr key={i} className="hover:bg-slate-50/20 transition-colors">
+                                                        <td className="px-8 py-5 font-mono text-xs font-bold text-teal-600">{r.id}</td>
+                                                        <td className="px-6 py-5 font-bold text-slate-700 text-sm">{r.p}</td>
+                                                        <td className="px-6 py-5 text-sm text-slate-500">{r.f}</td>
+                                                        <td className="px-6 py-5">
+                                                            <span className="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase">Sincronizado</span>
+                                                        </td>
+                                                        <td className="px-8 py-5 text-right">
+                                                            <button 
+                                                                onClick={() => logAction('Visualizar Bundle', `Transacción: ${r.id}`)}
+                                                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                            >
+                                                                <FileText size={18} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentView === 'auditoria' && (
+                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-sm">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <div>
+                                            <h3 className="text-2xl font-black text-slate-800">Registro de Auditoría</h3>
+                                            <p className="text-sm text-slate-400 font-medium">Trazabilidad de acciones según Ley 1581 (Habeas Data).</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl text-teal-600 font-bold text-xs border border-teal-600/10">
+                                            <ShieldCheck size={14} />
+                                            Cumplimiento Resolución 1888
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="space-y-3">
+                                        {auditLogs.length > 0 ? (
+                                            auditLogs.map((log) => (
+                                                <div key={log.id} className="group bg-slate-50/50 hover:bg-white hover:shadow-md border border-transparent hover:border-slate-100 rounded-2xl p-4 flex items-center justify-between transition-all">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={`p-2 rounded-xl ${
+                                                            log.action.includes('Visualizar') ? 'bg-blue-50 text-blue-500' : 
+                                                            log.action.includes('Consulta') ? 'bg-purple-50 text-purple-500' : 'bg-slate-100 text-slate-500'
+                                                        }`}>
+                                                            {log.action.includes('Visualizar') ? <Search size={16} /> : <Activity size={16} />}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-slate-700">{log.action}: <span className="font-medium text-slate-500">{log.resource}</span></p>
+                                                            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{log.user} • {new Date(log.timestamp).toLocaleString()}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button className="text-[10px] font-bold text-teal-600 uppercase tracking-tighter hover:underline">Ver Detalles</button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="py-20 text-center text-slate-400 font-medium italic">No hay registros de auditoría recientes.</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         <footer className="mt-10 grid grid-cols-4 gap-4">
                             {[
                                 { label: 'Tiempo Prom. Validación', value: '1.2m', icon: Clock },
