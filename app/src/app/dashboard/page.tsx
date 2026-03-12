@@ -404,6 +404,7 @@ export default function DashboardPage() {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [motor, setMotor] = useState('groq');
     const [processedRecords, setProcessedRecords] = useState<any[]>([]);
+    const [fetchingRecords, setFetchingRecords] = useState(false);
 
     // FASE 6: Interoperabilidad Bidireccional
     const [showTimeline, setShowTimeline] = useState(false);
@@ -475,6 +476,8 @@ export default function DashboardPage() {
     }, [router]);
 
     const loadRecords = async () => {
+        if (!user) return;
+        setFetchingRecords(true);
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
             const tid = user?.id || 'default';
@@ -516,14 +519,16 @@ export default function DashboardPage() {
             }
         } catch (e) {
             console.error("Error loading records", e);
+        } finally {
+            setFetchingRecords(false);
         }
     };
 
     useEffect(() => {
-        if (!loading) {
+        if (!loading && user) {
             loadRecords();
         }
-    }, [loading]);
+    }, [loading, user]);
 
     const handleExtract = async () => {
         if (!extractText) {
@@ -894,37 +899,53 @@ export default function DashboardPage() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
-                                        {processedRecords.length > 0 ? (
-                                            processedRecords.map((row, i) => (
-                                                <tr key={i} className={`hover:bg-slate-50/30 transition-colors group ${'isReal' in row && row.isReal ? 'border-l-4 border-l-primary' : ''}`}>
+                                        {fetchingRecords ? (
+                                            Array.from({ length: 3 }).map((_, i) => (
+                                                <tr key={i} className="animate-pulse">
                                                     <td className="px-8 py-5">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="size-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs uppercase group-hover:bg-primary/20 group-hover:text-primary transition-all">
-                                                                {row.p.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-                                                            </div>
-                                                            <span className="text-sm font-bold text-slate-700">{row.p}</span>
+                                                            <div className="size-9 rounded-full bg-slate-100"></div>
+                                                            <div className="h-4 w-32 bg-slate-100 rounded"></div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-5 text-sm text-slate-500 font-medium">{row.f}</td>
-                                                    <td className="px-6 py-5">
-                                                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg ${row.color === 'red' ? 'bg-red-50 text-red-500' : row.color === 'blue' ? 'bg-blue-50 text-blue-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                                                            {row.t}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-5">
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-xs font-mono font-bold text-teal-600">{row.id}</span>
-                                                            <ExternalLink size={16} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                        </div>
-                                                    </td>
+                                                    <td className="px-6 py-5"><div className="h-4 w-20 bg-slate-50 rounded"></div></td>
+                                                    <td className="px-6 py-5"><div className="h-4 w-16 bg-slate-50 rounded"></div></td>
+                                                    <td className="px-6 py-5"><div className="h-4 w-24 bg-slate-50 rounded"></div></td>
                                                 </tr>
                                             ))
                                         ) : (
-                                            <tr>
-                                                <td colSpan={4} className="px-8 py-20 text-center text-slate-400 font-medium italic">
-                                                    No hay atenciones recientes procesadas.
-                                                </td>
-                                            </tr>
+                                            processedRecords.length > 0 ? (
+                                                processedRecords.map((row, i) => (
+                                                    <tr key={i} className={`hover:bg-slate-50/30 transition-colors group ${'isReal' in row && row.isReal ? 'border-l-4 border-l-primary' : ''}`}>
+                                                        <td className="px-8 py-5">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="size-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs uppercase group-hover:bg-primary/20 group-hover:text-primary transition-all">
+                                                                    {row.p.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                                                                </div>
+                                                                <span className="text-sm font-bold text-slate-700">{row.p}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-5 text-sm text-slate-500 font-medium">{row.f}</td>
+                                                        <td className="px-6 py-5">
+                                                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg ${row.color === 'red' ? 'bg-red-50 text-red-500' : row.color === 'blue' ? 'bg-blue-50 text-blue-500' : 'bg-emerald-50 text-emerald-500'}`}>
+                                                                {row.t}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-5">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-xs font-mono font-bold text-teal-600">{row.id}</span>
+                                                                <ExternalLink size={16} className="text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={4} className="px-8 py-20 text-center text-slate-400 font-medium italic">
+                                                        No hay atenciones recientes procesadas.
+                                                    </td>
+                                                </tr>
+                                            )
                                         )}
                                         </tbody>
                                     </table>
