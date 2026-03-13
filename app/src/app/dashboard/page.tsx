@@ -441,11 +441,18 @@ export default function DashboardPage() {
         const checkMinisterio = async () => {
             try {
                 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-                const response = await fetch(`${apiUrl}/status/minsalud`);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch(`${apiUrl}/status/minsalud`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                
                 const data = await response.json();
                 setIsMinisterioConnected(data.status === 'connected');
-            } catch (error) {
-                console.error('Error checking MinSalud status:', error);
+            } catch (error: any) {
+                console.error('Error checking MinSalud status:', error.name === 'AbortError' ? 'Timeout' : error);
                 setIsMinisterioConnected(false);
             }
         };
@@ -499,10 +506,16 @@ export default function DashboardPage() {
     const loadRecords = async () => {
         if (!user) return;
         setFetchingRecords(true);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
             const tid = user?.id || 'default';
-            const response = await fetch(`${apiUrl}/dashboard/recent-records?tenant_id=${tid}`);
+            const response = await fetch(`${apiUrl}/dashboard/recent-records?tenant_id=${tid}`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
             const result = await response.json();
 
             if (result.status === 'success' && result.data) {
@@ -538,8 +551,9 @@ export default function DashboardPage() {
                     }
                 }
             }
-        } catch (e) {
-            console.error("Error loading records", e);
+        } catch (e: any) {
+            console.error("Error loading records", e.name === 'AbortError' ? 'Timeout' : e);
+            setProcessedRecords([]);
         } finally {
             setFetchingRecords(false);
         }

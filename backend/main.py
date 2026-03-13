@@ -35,14 +35,16 @@ signature_manager = SignatureManager()
 db = get_db()
 license_val = LicenseValidator()
 
+
 class ExtractRequest(BaseModel):
     text: str
     tenant_id: Optional[str] = None
     motor: Optional[str] = "llama3.1"
-    license_key: Optional[str] = None # Required for enterprise mode
-    ips_name: Optional[str] = None    # Required for enterprise mode
-    reps_code: Optional[str] = "110011234501" # Mock REPS (12 digits)
-    patient_id_type: Optional[str] = "CC"     # Default to CC
+    license_key: Optional[str] = None  # Required for enterprise mode
+    ips_name: Optional[str] = None  # Required for enterprise mode
+    reps_code: Optional[str] = "110011234501"  # Mock REPS (12 digits)
+    patient_id_type: Optional[str] = "CC"  # Default to CC
+
 
 class AuditLogRequest(BaseModel):
     user_email: Optional[str] = None
@@ -51,9 +53,11 @@ class AuditLogRequest(BaseModel):
     details: Optional[dict] = None
     tenant_id: Optional[str] = None
 
+
 @app.get("/")
 async def root():
     return {"status": "ok", "message": "NexoSalud RDA Backend is running"}
+
 
 @app.get("/patient-summary/{patient_id}")
 async def get_patient_summary(patient_id: str):
@@ -68,6 +72,7 @@ async def get_patient_summary(patient_id: str):
         print(f"❌ Error consultando resumen: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/extract-rda")
 async def extract_rda(payload: ExtractRequest):
     try:
@@ -75,21 +80,23 @@ async def extract_rda(payload: ExtractRequest):
         app_mode = os.environ.get("APP_MODE", "saas")
         if app_mode == "enterprise":
             if not payload.license_key or not license_val.validate(payload.license_key):
-                raise HTTPException(status_code=403, detail="Licencia inválida o expirada")
+                raise HTTPException(
+                    status_code=403, detail="Licencia inválida o expirada"
+                )
 
         # 1. Extracción con IA
         print(f"Paso 1: Extrayendo datos con IA ({payload.motor})...")
         extracted_data = await extractor.extract_data(payload.text, motor=payload.motor)
-        
+
         if "error" in extracted_data:
             raise Exception(f"IA Error: {extracted_data['error']}")
 
         # 2. Formateo a Estándar HL7 FHIR R4 (Resolución 1888 / Vulcano)
         print("Paso 2: Generando Bundle FHIR Transaccional...")
         fhir_json = formatter.format_rda(
-            extracted_data, 
+            extracted_data,
             reps_code=payload.reps_code,
-            patient_id_type=payload.patient_id_type
+            patient_id_type=payload.patient_id_type,
         )
 
         # 2.1 Validación FHIR (Guía Vulcano)
@@ -107,21 +114,27 @@ async def extract_rda(payload: ExtractRequest):
         # 4. Persistencia en Base de Datos (Supabase)
         print("Paso 4: Persistencia en Tablas Patients & RDA_Records...")
         # Aseguramos un tenant_id base para cumplir con la segregación
-        tid = payload.tenant_id if payload.tenant_id and payload.tenant_id != "default" else DEFAULT_TENANT_ID
-        
+        tid = (
+            payload.tenant_id
+            if payload.tenant_id and payload.tenant_id != "default"
+            else DEFAULT_TENANT_ID
+        )
+
         # 4.1 Upsert Patient
         patient_data = {
             "tipo_documento": payload.patient_id_type,
             "documento": str(extracted_data.get("patient_id", "00000000")),
             "nombre_completo": extracted_data.get("patient_name", "Desconocido"),
-            "tenant_id": tid
+            "tenant_id": tid,
         }
         # Para evitar problemas de tipos, nos aseguramos que patient_id_type y patient_id existan
         patient_id = await db.upsert_patient(patient_data)
-        
+
         # 4.2 Save RDA Record vinculado al id del paciente
-        estado_envio = "Exitoso" if result_minsalud.get("status") == "success" else "Error"
-        
+        estado_envio = (
+            "Exitoso" if result_minsalud.get("status") == "success" else "Error"
+        )
+
         rda_record = {
             "patient_id": patient_id,
             "tipo_rda": tipo_atencion,
@@ -130,40 +143,39 @@ async def extract_rda(payload: ExtractRequest):
             "request_id": result_minsalud.get("request_id"),
             "operation_outcome": result_minsalud.get("operation_outcome"),
             "estado_envio": estado_envio,
-            "tenant_id": tid
+            "tenant_id": tid,
         }
         await db.save_rda_record(rda_record)
 
         # Mantenemos compatibilidad con el registro antiguo si es necesario (opcional)
-        # await db.save_rda(db_record) 
+        # await db.save_rda(db_record)
 
         return {
             "status": result_minsalud.get("status"),
             "codigo_vida": result_minsalud.get("codigo_vida"),
             "request_id": result_minsalud.get("request_id"),
             "operation_outcome": result_minsalud.get("operation_outcome"),
-            "fhir_bundle": json.loads(fhir_json)
+            "fhir_bundle": json.loads(fhir_json),
         }
 
     except Exception as e:
         print(f"❌ Error en Pipeline: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error en Pipeline: {str(e)}")
 
+
 @app.get("/recent-rda")
 async def get_recent_rda(tenant_id: Optional[str] = None):
     try:
         response = await db.get_recent_rda(tenant_id=tenant_id)
-        
+
         # Extraemos la lista de datos del objeto de respuesta de Supabase
-        records = response.data if hasattr(response, 'data') else response
-        
-        return {
-            "status": "success",
-            "data": records
-        }
+        records = response.data if hasattr(response, "data") else response
+
+        return {"status": "success", "data": records}
     except Exception as e:
         print(f"❌ Error obteniendo registros: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/dashboard/recent-records")
 async def dashboard_recent_records(tenant_id: Optional[str] = None):
@@ -173,40 +185,43 @@ async def dashboard_recent_records(tenant_id: Optional[str] = None):
     try:
         tid = tenant_id if tenant_id and tenant_id != "default" else DEFAULT_TENANT_ID
         response = await db.get_recent_records_with_patients(tenant_id=tid)
-        
+
         # Manejo robusto de la respuesta de Supabase
         records = []
-        if hasattr(response, 'data'):
+        if hasattr(response, "data"):
             records = response.data
         elif isinstance(response, list):
             records = response
-        elif isinstance(response, dict) and 'data' in response:
-            records = response['data']
+        elif isinstance(response, dict) and "data" in response:
+            records = response["data"]
 
-        return {
-            "status": "success",
-            "data": records
-        }
+        return {"status": "success", "data": records}
     except Exception as e:
         print(f"❌ Error en dashboard API: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/audit-log")
 async def save_audit_log(payload: AuditLogRequest):
     try:
-        tid = payload.tenant_id if payload.tenant_id and payload.tenant_id != "default" else None
+        tid = (
+            payload.tenant_id
+            if payload.tenant_id and payload.tenant_id != "default"
+            else None
+        )
         log_data = {
             "user_email": payload.user_email,
             "action": payload.action,
             "resource": payload.resource,
             "details": payload.details,
-            "tenant_id": tid
+            "tenant_id": tid,
         }
         await db.save_audit_log(log_data)
         return {"status": "success"}
     except Exception as e:
         print(f"❌ Error guardando auditoría: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/status/minsalud")
 async def check_minsalud_status():
@@ -215,15 +230,27 @@ async def check_minsalud_status():
     Retorna el estado del token de acceso.
     """
     try:
+        # Verificar si las credenciales están configuradas
+        if (
+            not minsalud.tenant_id
+            or not minsalud.client_id
+            or not minsalud.client_secret
+        ):
+            return {
+                "status": "not_configured",
+                "message": "Ministerio: Credenciales no configuradas",
+                "token_obtained": False,
+            }
+
         token = await minsalud._get_access_token()
         return {
             "status": "connected",
             "message": "Ministerio: Conectado",
-            "token_obtained": True
+            "token_obtained": True,
         }
     except Exception as e:
         return {
             "status": "disconnected",
             "message": "Ministerio: Desconectado",
-            "error": str(e)
+            "error": str(e),
         }
