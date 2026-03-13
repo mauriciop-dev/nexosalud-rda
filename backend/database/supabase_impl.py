@@ -34,7 +34,7 @@ class SupabaseDatabase(BaseDatabase):
         return ""
 
     async def save_rda_record(self, rda_data: dict):
-        """Guarda un registro RDA vinculado a un paciente."""
+        """Guarda un registro RDA vinculado a un paciente, incluyendo logs de MinSalud."""
         return self.client.table("rda_records").insert(rda_data).execute()
 
     async def get_recent_records_with_patients(self, tenant_id: Optional[str] = None, limit: int = 10):

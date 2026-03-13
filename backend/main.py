@@ -101,7 +101,8 @@ async def extract_rda(payload: ExtractRequest):
 
         # 3. Envío al Bus de Interoperabilidad (MinSalud / VIDA)
         print("Paso 3: Enviando a MinSalud...")
-        result_minsalud = await minsalud.send_rda(fhir_json)
+        tipo_atencion = extracted_data.get("tipo_atencion", "paciente")
+        result_minsalud = await minsalud.send_rda(fhir_json, type_rda=tipo_atencion)
 
         # 4. Persistencia en Base de Datos (Supabase)
         print("Paso 4: Persistencia en Tablas Patients & RDA_Records...")
@@ -119,12 +120,16 @@ async def extract_rda(payload: ExtractRequest):
         patient_id = await db.upsert_patient(patient_data)
         
         # 4.2 Save RDA Record vinculado al id del paciente
+        estado_envio = "Exitoso" if result_minsalud.get("status") == "success" else "Error"
+        
         rda_record = {
             "patient_id": patient_id,
-            "tipo_rda": extracted_data.get("tipo_atencion", "Consulta"),
+            "tipo_rda": tipo_atencion,
             "json_fhir": json.loads(fhir_json),
             "codigo_vida": result_minsalud.get("codigo_vida"),
-            "estado_envio": "Exitoso" if result_minsalud.get("codigo_vida") else "Pendiente",
+            "request_id": result_minsalud.get("request_id"),
+            "operation_outcome": result_minsalud.get("operation_outcome"),
+            "estado_envio": estado_envio,
             "tenant_id": tid
         }
         await db.save_rda_record(rda_record)
@@ -133,8 +138,10 @@ async def extract_rda(payload: ExtractRequest):
         # await db.save_rda(db_record) 
 
         return {
-            "status": "success",
+            "status": result_minsalud.get("status"),
             "codigo_vida": result_minsalud.get("codigo_vida"),
+            "request_id": result_minsalud.get("request_id"),
+            "operation_outcome": result_minsalud.get("operation_outcome"),
             "fhir_bundle": json.loads(fhir_json)
         }
 
@@ -200,3 +207,23 @@ async def save_audit_log(payload: AuditLogRequest):
     except Exception as e:
         print(f"❌ Error guardando auditoría: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/status/minsalud")
+async def check_minsalud_status():
+    """
+    Endpoint para verificar la conexión con el Ministerio de Salud.
+    Retorna el estado del token de acceso.
+    """
+    try:
+        token = await minsalud._get_access_token()
+        return {
+            "status": "connected",
+            "message": "Ministerio: Conectado",
+            "token_obtained": True
+        }
+    except Exception as e:
+        return {
+            "status": "disconnected",
+            "message": "Ministerio: Desconectado",
+            "error": str(e)
+        }

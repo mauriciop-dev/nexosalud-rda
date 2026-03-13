@@ -301,10 +301,14 @@ function ClinicalTimelineModal({
 }
 
 // ─── Error Log Modal ────────────────────────────────────────────────────────
-function ErrorLogModal({ onClose, error }: { onClose: () => void, error: string }) {
+function ErrorLogModal({ onClose, error, operationOutcome }: { onClose: () => void, error: string, operationOutcome?: any }) {
+    const errorMessage = operationOutcome 
+        ? JSON.stringify(operationOutcome, null, 2)
+        : (error || "Se produjo un error desconocido durante la validación del Bundle FHIR o la firma JWS. Por favor, revise el formato del texto de entrada.");
+    
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-6 animate-in fade-in zoom-in-95 duration-300">
-            <div className="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden border border-red-100">
+            <div className="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden border border-red-100">
                 <div className="bg-red-600 p-8 text-white relative">
                     <button onClick={onClose} className="absolute top-6 right-6 p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-all">
                         <X size={20} />
@@ -314,17 +318,17 @@ function ErrorLogModal({ onClose, error }: { onClose: () => void, error: string 
                             <AlertTriangle size={24} />
                         </div>
                         <div>
-                            <h3 className="text-xl font-black">Error de Validación</h3>
-                            <p className="text-red-100 text-[10px] font-medium">Log técnico devuelto por el motor de validación.</p>
+                            <h3 className="text-xl font-black">Error de Validación del Ministerio</h3>
+                            <p className="text-red-100 text-[10px] font-medium">Log técnico devuelto por MinSalud - IHCE.</p>
                         </div>
                     </div>
                 </div>
                 <div className="p-8">
-                    <div className="bg-slate-900 rounded-2xl p-6 font-mono text-[10px] text-red-400 overflow-x-auto border border-red-900/20 shadow-inner">
-                        <p className="text-slate-500 mb-2">// NEXOSALUD_RDA_ERROR_LOG</p>
-                        <p className="leading-relaxed whitespace-pre-wrap">
-                            {error || "Se produjo un error desconocido durante la validación del Bundle FHIR o la firma JWS. Por favor, revise el formato del texto de entrada."}
-                        </p>
+                    <div className="bg-slate-900 rounded-2xl p-6 font-mono text-[10px] text-red-400 overflow-x-auto border border-red-900/20 shadow-inner max-h-96 overflow-y-auto">
+                        <p className="text-slate-500 mb-2">// MINISTERIO_DE_SALUD_ERROR_RESPONSE</p>
+                        <pre className="leading-relaxed whitespace-pre-wrap">
+                            {errorMessage}
+                        </pre>
                     </div>
                     <div className="mt-8 flex justify-end gap-3">
                         <button onClick={onClose} className="px-8 py-3 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all">Cerrar</button>
@@ -421,6 +425,7 @@ export default function DashboardPage() {
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [lastSubmissionStatus, setLastSubmissionStatus] = useState<'success' | 'error' | 'none'>('none');
     const [lastErrorDetail, setLastErrorDetail] = useState<string | null>(null);
+    const [lastOperationOutcome, setLastOperationOutcome] = useState<any>(null);
     const [extractionStep, setExtractionStep] = useState(0);
     const [extractionProgress, setExtractionProgress] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
@@ -430,6 +435,22 @@ export default function DashboardPage() {
         cie10: false,
         reps: false
     });
+    const [isMinisterioConnected, setIsMinisterioConnected] = useState(false);
+
+    useEffect(() => {
+        const checkMinisterio = async () => {
+            try {
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+                const response = await fetch(`${apiUrl}/status/minsalud`);
+                const data = await response.json();
+                setIsMinisterioConnected(data.status === 'connected');
+            } catch (error) {
+                console.error('Error checking MinSalud status:', error);
+                setIsMinisterioConnected(false);
+            }
+        };
+        checkMinisterio();
+    }, []);
 
     const logAction = async (action: string, resource: string, details: any = {}) => {
         const customReason = details.motivo || (action.includes('IHCE') ? 'Seguimiento clínico' : 'Trámite administrativo');
@@ -606,6 +627,7 @@ export default function DashboardPage() {
             } else {
                 setLastSubmissionStatus('error');
                 setLastErrorDetail(result.message || 'Error en la extracción');
+                setLastOperationOutcome(result.operation_outcome || null);
                 setValidationResults({ fhir: false, jws: false, cie10: false, reps: true });
                 setExtracting(false);
             }
@@ -613,6 +635,7 @@ export default function DashboardPage() {
             console.error('Error:', error);
             setLastSubmissionStatus('error');
             setLastErrorDetail(error.message);
+            setLastOperationOutcome(null);
             setExtracting(false);
             logAction('Error de Extracción', error.message);
         }
@@ -762,7 +785,15 @@ export default function DashboardPage() {
                 <main className="flex-1 flex flex-col overflow-hidden">
                     {/* Header */}
                         <header className="bg-white border-b border-slate-100 px-10 py-5 flex items-center justify-between shadow-[0_4px_24px_rgba(0,0,0,0.02)] z-10">
-                            <h2 className="text-xl font-black text-slate-800 tracking-tight">Panel de Control</h2>
+                            <div className="flex items-center gap-6">
+                                <h2 className="text-xl font-black text-slate-800 tracking-tight">Panel de Control</h2>
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100">
+                                    <div className={`size-2 rounded-full animate-pulse ${isMinisterioConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`}></div>
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                        Ministerio: {isMinisterioConnected ? 'Conectado' : 'Sincronizando...'}
+                                    </span>
+                                </div>
+                            </div>
                             <div className="flex items-center gap-4">
                                 <div className="flex bg-slate-50 border border-slate-100 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-teal-500/20 transition-all">
                                     <div className="relative flex-1">
@@ -1244,7 +1275,13 @@ export default function DashboardPage() {
             )}
 
             {showNormativeModal && <NormativeChecklistModal onClose={() => setShowNormativeModal(false)} results={validationResults} />}
-            {showErrorModal && <ErrorLogModal onClose={() => setShowErrorModal(false)} error={lastErrorDetail || ''} />}
+            {showErrorModal && (
+                <ErrorLogModal 
+                    onClose={() => setShowErrorModal(false)} 
+                    error={lastErrorDetail || ''} 
+                    operationOutcome={lastOperationOutcome}
+                />
+            )}
 
             {showTimeline && (
                 <ClinicalTimelineModal 
