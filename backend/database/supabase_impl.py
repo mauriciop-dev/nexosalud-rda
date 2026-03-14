@@ -4,6 +4,7 @@ import os
 import json
 from typing import Optional
 
+
 class SupabaseDatabase(BaseDatabase):
     def __init__(self):
         url = os.environ.get("SUPABASE_URL")
@@ -25,21 +26,24 @@ class SupabaseDatabase(BaseDatabase):
 
     async def upsert_patient(self, patient_data: dict) -> str:
         """Crea o actualiza un paciente y devuelve su ID."""
-        result = self.client.table("patients").upsert(
-            patient_data, 
-            on_conflict="documento,tipo_documento"
-        ).execute()
+        result = (
+            self.client.table("pacientes")
+            .upsert(patient_data, on_conflict="documento,tipo_documento")
+            .execute()
+        )
         if result.data:
             return result.data[0]["id"]
         return ""
 
     async def save_rda_record(self, rda_data: dict):
         """Guarda un registro RDA vinculado a un paciente, incluyendo logs de MinSalud."""
-        return self.client.table("rda_records").insert(rda_data).execute()
+        return self.client.table("envios_rda").insert(rda_data).execute()
 
-    async def get_recent_records_with_patients(self, tenant_id: Optional[str] = None, limit: int = 10):
+    async def get_recent_records_with_patients(
+        self, tenant_id: Optional[str] = None, limit: int = 10
+    ):
         """Obtiene registros con JOIN a pacientes."""
-        query = self.client.table("rda_records").select("*, patients(*)")
+        query = self.client.table("envios_rda").select("*, pacientes(*)")
         if tenant_id:
             query = query.eq("tenant_id", tenant_id)
         return query.order("created_at", desc=True).limit(limit).execute()

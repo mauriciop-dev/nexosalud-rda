@@ -136,9 +136,9 @@ async def extract_rda(payload: ExtractRequest):
         )
 
         rda_record = {
-            "patient_id": patient_id,
+            "paciente_id": patient_id,
             "tipo_rda": tipo_atencion,
-            "json_fhir": json.loads(fhir_json),
+            "fhir_payload": json.loads(fhir_json),
             "codigo_vida": result_minsalud.get("codigo_vida"),
             "request_id": result_minsalud.get("request_id"),
             "operation_outcome": result_minsalud.get("operation_outcome"),
@@ -195,7 +195,22 @@ async def dashboard_recent_records(tenant_id: Optional[str] = None):
         elif isinstance(response, dict) and "data" in response:
             records = response["data"]
 
-        return {"status": "success", "data": records}
+        # Transformar datos para el frontend
+        formatted_records = []
+        for record in records:
+            paciente = record.get("pacientes") or {}
+            formatted_records.append(
+                {
+                    **record,
+                    "patients": {
+                        "nombre_completo": f"{paciente.get('primer_nombre', '')} {paciente.get('primer_apellido', '')}".strip()
+                        or "Paciente",
+                        "documento": paciente.get("numero_identificacion", ""),
+                    },
+                }
+            )
+
+        return {"status": "success", "data": formatted_records}
     except Exception as e:
         print(f"❌ Error en dashboard API: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
