@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     }
     
     if (body.clinical_records && Array.isArray(body.clinical_records)) {
-      body.clinical_records.forEach((record, index) => {
+      body.clinical_records.forEach((record: any, index: number) => {
         if (!record.diagnosis_codes || record.diagnosis_codes.length === 0) {
           validationErrors.push(`Registro ${index + 1}: El campo 'diagnosis_codes' (CIE-10) es obligatorio por la Res. 1799 de 2026.`);
         }
