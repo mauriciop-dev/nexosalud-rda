@@ -1,19 +1,42 @@
 
 import { NextResponse } from 'next/server';
-import { validateApiKey, logApiEvent } from '@/lib/insforge';
+import { verifyAccessToken } from '@/lib/auth';
+import { signDocument } from '@/lib/signature';
+import { enqueueJob } from '@/lib/queue';
+import { logApiEvent } from '@/lib/insforge';
 
 export async function POST(request: Request) {
   try {
-    const apiKey = request.headers.get('X-Nexo-API-Key');
-    if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 401 });
-    const keyData = await validateApiKey(apiKey);
-    if (!keyData || keyData.status !== 'active') return NextResponse.json({ error: "Invalid Key" }, { status: 403 });
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: "Missing or invalid token" }, { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const payload = await verifyAccessToken(token);
+    if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
     const body = await request.json();
-    console.log("[FHIR] Processing RDA Hospitalización...");
-    
-    await logApiEvent({ event_id: crypto.randomUUID(), api_//key: apiKey, endpoint: '/Composition/$enviar-rda-hospitalizacion', timestamp: new Date().toISOString(), status_code: 200, duration_ms: 20 });
+    const startTime = Date.now();
 
-    return NextResponse.json({ status: "Success", vida_code: `VIDA-${crypto.randomUUID().slice(0,8).toUpperCase()}` }, { status: 200 });
+    const digitalSignature = await signDocument(body);
+    const signedPayload = { data: body, signature: digitalSignature };
+    const jobId = await enqueueJob('RDA_SEND', signedPayload);
+
+    await logApiEvent({ 
+      event_id: jobId, 
+      api_key: payload.client_id as string, 
+      endpoint: '/Composition/$enviar-rda-hospitalizacion', 
+      timestamp: new Date().toISOString(), 
+      status_code: 202, 
+      duration_ms: Date.now() - startTime 
+    });
+
+    return NextResponse.json({ 
+      status: "Accepted", 
+      message: "RDA Hospitalización queued for transmission.",
+      trackingId: jobId 
+    }, { status: 202 });
+
   } catch (e) { return NextResponse.json({ error: "Bad Request" }, { status: 400 }); }
 }
