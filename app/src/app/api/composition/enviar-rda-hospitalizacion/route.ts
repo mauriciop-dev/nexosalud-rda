@@ -1,0 +1,19 @@
+
+import { NextResponse } from 'next/server';
+import { validateApiKey, logApiEvent } from '@/lib/insforge';
+
+export async function POST(request: Request) {
+  try {
+    const apiKey = request.headers.get('X-Nexo-API-Key');
+    if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 401 });
+    const keyData = await validateApiKey(apiKey);
+    if (!keyData || keyData.status !== 'active') return NextResponse.json({ error: "Invalid Key" }, { status: 403 });
+
+    const body = await request.json();
+    console.log("[FHIR] Processing RDA Hospitalización...");
+    
+    await logApiEvent({ event_id: crypto.randomUUID(), api_//key: apiKey, endpoint: '/Composition/$enviar-rda-hospitalizacion', timestamp: new Date().toISOString(), status_code: 200, duration_ms: 20 });
+
+    return NextResponse.json({ status: "Success", vida_code: `VIDA-${crypto.randomUUID().slice(0,8).toUpperCase()}` }, { status: 200 });
+  } catch (e) { return NextResponse.json({ error: "Bad Request" }, { status: 400 }); }
+}

@@ -665,19 +665,62 @@ export default function DashboardPage() {
         setIsDragging(false);
     };
 
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-        const file = e.dataTransfer.files[0];
-        if (file && file.type === 'text/plain') {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const allowedTypes = ['text/plain', 'application/pdf'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('⚠️ Solo se permiten archivos .txt o .pdf');
+            return;
+        }
+
+        if (file.type === 'application/pdf') {
+            logAction('Carga de PDF', file.name);
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+                const response = await fetch(`${apiUrl}/extract-pdf`, {
+                    method: 'POST',
+                    body: formData,
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    setExtractText(result.text);
+                    alert('✅ PDF extraído correctamente');
+                } else {
+                    alert('❌ Error al extraer texto del PDF: ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ Error al procesar el PDF');
+            }
+        } else {
             const reader = new FileReader();
             reader.onload = (event) => {
                 setExtractText(event.target?.result as string);
                 logAction('Carga de Archivo', file.name);
             };
             reader.readAsText(file);
+        }
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files[0];
+        const allowedTypes = ['text/plain', 'application/pdf'];
+        
+        if (file && allowedTypes.includes(file.type)) {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            const input = document.getElementById('file-input') as HTMLInputElement;
+            if (input) input.files = dataTransfer.files;
+            
+            handleFileChange({ target: { files: dataTransfer.files } } as any);
         } else {
-            alert('⚠️ Solo se permiten archivos de texto (.txt)');
+            alert('⚠️ Solo se permiten archivos .txt o .pdf');
         }
     };
 
@@ -1010,8 +1053,22 @@ export default function DashboardPage() {
                                 
                                 <div className="relative z-10">
                                     <h3 className="text-xl font-black mb-2 tracking-tight">Procesar Historia</h3>
-                                    <p className="text-slate-400 text-xs font-medium mb-8">Pega el texto clínico para extraer campos FHIR.</p>
+                                    <p className="text-slate-400 text-xs font-medium mb-4">Pega el texto clínico o sube un archivo PDF para extraer campos FHIR.</p>
                                     
+                                    <div className="mb-4">
+                                        <label htmlFor="file-input" className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-white/20 rounded-xl cursor-pointer hover:border-teal-500/50 hover:bg-white/5 transition-all text-sm text-slate-400">
+                                            <FileText size={18} />
+                                            <span>Subir archivo .txt o .pdf</span>
+                                        </label>
+                                        <input 
+                                            id="file-input"
+                                            type="file" 
+                                            accept=".txt,.pdf"
+                                            onChange={handleFileChange}
+                                            className="hidden"
+                                        />
+                                    </div>
+
                                     <textarea 
                                         className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm font-medium placeholder:text-slate-600 focus:ring-2 focus:ring-teal-500/50 outline-none min-h-[220px] transition-all mb-6"
                                         placeholder="Ej: Paciente masculino de 45 años..."

@@ -28,9 +28,9 @@ export default function HeroSection() {
                         <Link href="/dashboard" className="w-full sm:w-auto px-8 py-4 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-teal-600/30 flex items-center justify-center gap-2">
                             Probar en la Nube <ArrowRight className="w-5 h-5" />
                         </Link>
-                        <a href="#pricing" className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl font-semibold text-lg transition-all shadow-sm flex items-center justify-center gap-2">
-                            Ver Planes Enterprise
-                        </a>
+                        <Link href="/aliados" className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl font-semibold text-lg transition-all shadow-sm flex items-center justify-center gap-2">
+                            Probar Simulador Res. 1888
+                        </Link>
                     </div>
                 </div>
 
