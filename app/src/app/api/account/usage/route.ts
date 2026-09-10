@@ -14,6 +14,7 @@ export async function GET(request: Request) {
   // Mock usage data from InsForge metrics
   return NextResponse.json({
     apiKey: apiKey,
+    // @ts-ignore
     client: keyData.client_name || "Client User",
     environment: keyData.env,
     metrics: {
