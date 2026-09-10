@@ -1,0 +1,12 @@
+{
+  "name": "@nexo-salud/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for Nexo Salud Interoperability API",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest",
+    "zod": "latest",
+    "axios": "latest"
+  }
+}
