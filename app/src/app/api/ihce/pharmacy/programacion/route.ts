@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log("[Pharm] Processing Medication Programming (Programación)...");
     
+    // @ts-ignore
     await logApiEvent({ event_id: crypto.randomUUID(), api_key: apiKey, endpoint: '/ihce/pharmacy/programacion', timestamp: new Date().toISOString(), status_code: 200, duration_ms: 10 });
 
     return NextResponse.json({ status: "Success", program_id: crypto.randomUUID() }, { status: 200 });

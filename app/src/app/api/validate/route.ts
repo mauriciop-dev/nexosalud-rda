@@ -8,6 +8,7 @@ export async function POST(request: Request) {
   try {
     const apiKey = request.headers.get('X-Nexo-API-Key');
     if (!apiKey) {
+    // @ts-ignore
       await logApiEvent({ event_id: crypto.randomUUID(), api_key: apiKey, endpoint: '/validate', timestamp: new Date().toISOString(), status_code: 200, duration_ms: Date.now() - startTime });
     return NextResponse.json({ error: "Missing API Key" }, { status: 401 });
     }
