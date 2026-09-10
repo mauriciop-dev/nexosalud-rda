@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 
 export default function SandboxPage() {
   const [jsonInput, setJsonInput] = useState('{\n  "patient_id": "12345",\n  "clinical_records": []\n}');
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<any>(null);
 
   const handleValidate = async () => {
     try {

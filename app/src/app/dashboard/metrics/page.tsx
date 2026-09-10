@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 
 export default function MetricsPage() {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<any>(null);
 
   useEffect(() => {
     async function fetchMetrics() {
