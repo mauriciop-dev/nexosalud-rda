@@ -1,3 +1,4 @@
+// Fixed TS Type Error
 
 export interface ApiMetric {
   event_id: string;
