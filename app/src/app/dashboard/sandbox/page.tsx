@@ -79,7 +79,7 @@ export default function SandboxPage() {
     
     try {
       const options: RequestInit = {
-        method: config.method || 'POST',
+        method: (config as any).method || 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'X-Nexo-API-Key': 'sandbox_key_123'
