@@ -21,9 +21,9 @@ export default function MCPSection() {
                 </li>
               ))}
             </ul>
-            <button className="px-6 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-all">
+            <a href="/nexo-mcp.zip" download className="inline-block px-6 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-all">
               Descargar Guía MCP
-            </button>
+            </a>
           </div>
           <div className="bg-black/50 p-6 rounded-2xl border border-white/10 font-mono text-xs text-blue-300">
             <div className="flex gap-2 mb-4">
