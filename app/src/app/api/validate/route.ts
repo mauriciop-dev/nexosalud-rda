@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     if (!validationResult.success) {
       // Mapear los errores de Zod al estándar FHIR OperationOutcome
-      const errors = validationResult.error.errors.map(err => err.message);
+      const errors = (validationResult.error as any).errors.map(err => err.message);
       return NextResponse.json(createOperationOutcome(errors), { status: 400 });
     }
 
