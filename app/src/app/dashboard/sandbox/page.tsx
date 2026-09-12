@@ -128,7 +128,7 @@ export default function SandboxPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="flex flex-col gap-2">
             <div className="text-sm text-gray-500 font-mono">
-              {TEMPLATES[selectedTemplate].method || "POST"} {TEMPLATES[selectedTemplate].url}
+              {(TEMPLATES[selectedTemplate] as any).method || "POST"} {TEMPLATES[selectedTemplate].url}
             </div>
             <textarea 
               className="w-full h-[500px] p-4 bg-[#1A1D24] text-green-400 font-mono text-sm rounded-xl border border-white/10 focus:border-[#3E3CFF] outline-none"
