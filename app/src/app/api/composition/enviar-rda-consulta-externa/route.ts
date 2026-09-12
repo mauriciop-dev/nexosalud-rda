@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     // 2. VALIDACIÓN NORMATIVA REAL (FHIR R4)
     const validationResult = FhirBundleSchema.safeParse(body);
     if (!validationResult.success) {
-      const errors = (validationResult.error as any).errors.map(err => err.message);
+      const errors = (validationResult.error as any).errors.map((err: any) => err.message);
       return NextResponse.json(createOperationOutcome(errors), { status: 400 });
     }
 
