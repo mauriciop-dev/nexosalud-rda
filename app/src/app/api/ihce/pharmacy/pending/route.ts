@@ -1,43 +1,38 @@
 
 import { NextResponse } from 'next/server';
-import { validateApiKey } from '@/lib/insforge';
+import { pharmacyCache } from '@/lib/sandbox-store';
+import { createOperationOutcome } from '@/lib/fhir';
 
 export async function GET(request: Request) {
   const apiKey = request.headers.get('X-Nexo-API-Key');
-  if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 401 });
-  
-  const keyData = await validateApiKey(apiKey);
-  if (!keyData || keyData.status !== 'active') {
-    return NextResponse.json({ error: "Invalid or inactive API Key" }, { status: 403 });
-  }
+  if (apiKey !== 'sandbox_key_123') return NextResponse.json(createOperationOutcome(["Auth failed. Use 'sandbox_key_123'."]), { status: 401 });
 
   const { searchParams } = new URL(request.url);
   const patient_id = searchParams.get('patient_id');
   
-  if (!patient_id) return NextResponse.json({ error: "patient_id query param required" }, { status: 400 });
+  if (!patient_id) return NextResponse.json(createOperationOutcome(["Falta el parámetro 'patient_id'."]), { status: 400 });
 
-  // Mock response: Prescriptions that have NOT been fully dispensed
-  return NextResponse.json({
-    patient_id: patient_id,
-    pending_prescriptions: [
-      { 
-        prescription_id: "pres_987", 
-        drug: "Insulina Glargina", 
-        ordered_qty: 3, 
-        dispensed_qty: 1, 
-        pending_qty: 2, 
-        provider: "IPS Norte", 
-        expiry_date: "2026-12-01" 
-      },
-      { 
-        prescription_id: "pres_654", 
-        drug: "Atorvastatina", 
-        ordered_qty: 1, 
-        dispensed_qty: 0, 
-        pending_qty: 1, 
-        provider: "Clínica Sur", 
-        expiry_date: "2026-11-15" 
+  const pending = [];
+  
+  // Buscar en el caché las prescripciones del paciente
+  for (const [pres_id, pres_data] of pharmacyCache.entries()) {
+    if (pres_data.patient_id === patient_id) {
+      for (const med of pres_data.medications) {
+        if (med.ordered_qty > med.dispensed_qty) {
+          pending.push({
+            prescription_id: pres_id,
+            drug: med.drug_name,
+            ordered_qty: med.ordered_qty,
+            dispensed_qty: med.dispensed_qty,
+            pending_qty: med.ordered_qty - med.dispensed_qty
+          });
+        }
       }
-    ]
+    }
+  }
+
+  return NextResponse.json({ 
+    patient_id, 
+    pending_prescriptions: pending 
   }, { status: 200 });
 }

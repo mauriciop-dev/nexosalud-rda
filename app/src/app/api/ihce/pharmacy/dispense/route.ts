@@ -1,56 +1,39 @@
 
 import { NextResponse } from 'next/server';
-import { validateApiKey, logApiEvent } from '@/lib/insforge';
+import { pharmacyCache } from '@/lib/sandbox-store';
+import { createOperationOutcome } from '@/lib/fhir';
 
 export async function POST(request: Request) {
   try {
     const apiKey = request.headers.get('X-Nexo-API-Key');
-    if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 401 });
-
-    const keyData = await validateApiKey(apiKey);
-    if (!keyData || keyData.status !== 'active') {
-      return NextResponse.json({ error: "Invalid or inactive API Key" }, { status: 403 });
-    }
+    if (apiKey !== 'sandbox_key_123') return NextResponse.json(createOperationOutcome(["Auth failed. Use 'sandbox_key_123'."]), { status: 401 });
 
     const body = await request.json();
-    const startTime = Date.now();
-
-    // Validation for Dispensing
+    
     if (!body.prescription_id || !body.dispensed_items || !Array.isArray(body.dispensed_items)) {
-      return NextResponse.json({ 
-        error: "Invalid Dispensing Data", 
-        details: "prescription_id and dispensed_items array are mandatory." 
-      }, { status: 400 });
+      return NextResponse.json(createOperationOutcome(["Faltan campos: 'prescription_id' o 'dispensed_items'."]), { status: 400 });
     }
 
+    const pres_data = pharmacyCache.get(body.prescription_id);
+    if (!pres_data) {
+      return NextResponse.json(createOperationOutcome(["Prescripción no encontrada en el Sandbox. Registre una primero."]), { status: 404 });
+    }
+
+    // Actualizar cantidades dispensadas
     for (const item of body.dispensed_items) {
-      if (!item.drug_name || !item.quantity_delivered) {
-        return NextResponse.json({ 
-          error: "Invalid Item Data", 
-          details: "Each dispensed item must have drug_name and quantity_delivered." 
-        }, { status: 400 });
+      const med = pres_data.medications.find((m: any) => m.drug_name === item.drug_name);
+      if (med) {
+        med.dispensed_qty += (item.quantity_delivered || 1);
       }
     }
 
-    // Logic: Update prescription status in InsForge 'clinical_records' or a specific 'dispensations' table
-    console.log(`[InsForge] Recording dispensation for prescription ${body.prescription_id}`);
-
-    await logApiEvent({ 
-      event_id: crypto.randomUUID(), 
-      api_key: apiKey, 
-      endpoint: '/ihce/pharmacy/dispense', 
-      timestamp: new Date().toISOString(), 
-      status_code: 200, 
-      duration_ms: Date.now() - startTime 
-    });
-
-    return NextResponse.json({ 
-      status: "Success", 
-      message: "Dispensation recorded successfully. Patient records updated.",
-      dispensation_id: crypto.randomUUID()
+    return NextResponse.json({
+      status: "Success",
+      message: "Dispensación registrada correctamente en el Sandbox.",
+      dispensation_id: `disp_${crypto.randomUUID().slice(0,8)}`
     }, { status: 200 });
 
-  } catch (error) {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  } catch(e) { 
+    return NextResponse.json(createOperationOutcome(["JSON Inválido."]), { status: 400 }); 
   }
 }

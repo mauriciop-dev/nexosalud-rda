@@ -1,53 +1,42 @@
 
 import { NextResponse } from 'next/server';
-import { validateApiKey, logApiEvent } from '@/lib/insforge';
+import { pharmacyCache } from '@/lib/sandbox-store';
+import { createOperationOutcome } from '@/lib/fhir';
 
 export async function POST(request: Request) {
   try {
     const apiKey = request.headers.get('X-Nexo-API-Key');
-    if (!apiKey) return NextResponse.json({ error: "Missing API Key" }, { status: 401 });
-
-    const keyData = await validateApiKey(apiKey);
-    if (!keyData || keyData.status !== 'active') {
-      return NextResponse.json({ error: "Invalid or inactive API Key" }, { status: 403 });
-    }
+    if (apiKey !== 'sandbox_key_123') return NextResponse.json(createOperationOutcome(["Auth failed. Use 'sandbox_key_123'."]), { status: 401 });
 
     const body = await request.json();
-    const startTime = Date.now();
-
-    // Regulatory Validation for Electronic Prescriptions
+    
     if (!body.patient_id || !body.medications || !Array.isArray(body.medications)) {
-      return NextResponse.json({ 
-        error: "Regulatory Violation", 
-        details: "patient_id and medications array are mandatory for electronic prescriptions." 
-      }, { status: 422 });
+      return NextResponse.json(createOperationOutcome(["Faltan campos obligatorios: 'patient_id' o el arreglo de 'medications'."]), { status: 400 });
     }
 
-    for (const med of body.medications) {
-      if (!med.drug_name || !med.dosage || !med.frequency) {
-        return NextResponse.json({ 
-          error: "Invalid Medication Data", 
-          details: "Each medication must have drug_name, dosage, and frequency." 
-        }, { status: 400 });
-      }
-    }
+    const prescription_id = `pres_${crypto.randomUUID().slice(0,8)}`;
+    
+    // Mapear medicamentos al store
+    const meds = body.medications.map((m: any) => ({
+      drug_name: m.drug_name || "Desconocido",
+      ordered_qty: m.quantity || 1,
+      dispensed_qty: 0
+    }));
 
-    await logApiEvent({ 
-      event_id: crypto.randomUUID(), 
-      api_key: apiKey, 
-      endpoint: '/ihce/pharmacy/prescription', 
-      timestamp: new Date().toISOString(), 
-      status_code: 201, 
-      duration_ms: Date.now() - startTime 
+    // Guardar en el Sandbox
+    pharmacyCache.set(prescription_id, {
+      patient_id: body.patient_id,
+      medications: meds,
+      date: new Date().toISOString()
     });
 
-    return NextResponse.json({ 
-      status: "Created", 
-      message: "Electronic prescription interoperated successfully.",
-      prescription_id: crypto.randomUUID()
+    return NextResponse.json({
+      status: "Created",
+      message: "Prescripción guardada exitosamente en el Sandbox.",
+      prescription_id
     }, { status: 201 });
 
-  } catch (error) {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  } catch(e) { 
+    return NextResponse.json(createOperationOutcome(["JSON Inválido."]), { status: 400 }); 
   }
 }
