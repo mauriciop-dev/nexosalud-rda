@@ -1,6 +1,7 @@
 
 "use client";
 import React from 'react';
+import Link from 'next/link';
 
 export default function MCPSection() {
   return (
@@ -21,9 +22,9 @@ export default function MCPSection() {
                 </li>
               ))}
             </ul>
-            <a href="/nexo-mcp.zip" download className="inline-block px-6 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-all">
-              Descargar Guía MCP
-            </a>
+            <Link href="/mcp-setup" className="inline-block px-6 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-all">
+              Ver Configuración MCP
+            </Link>
           </div>
           <div className="bg-black/50 p-6 rounded-2xl border border-white/10 font-mono text-xs text-blue-300">
             <div className="flex gap-2 mb-4">
