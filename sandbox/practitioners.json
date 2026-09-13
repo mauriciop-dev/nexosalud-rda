@@ -1,0 +1,18 @@
+[
+  {
+    "tipo_id": "CC",
+    "numero_id": "1000000001",
+    "nombre": "Dr. Carlos",
+    "apellido": "Méndez",
+    "especialidad": "100101",
+    "estado": "activo"
+  },
+  {
+    "tipo_id": "CC",
+    "numero_id": "1000000002",
+    "nombre": "Dra. Laura",
+    "apellido": "Vargas",
+    "especialidad": "100201",
+    "estado": "activo"
+  }
+]

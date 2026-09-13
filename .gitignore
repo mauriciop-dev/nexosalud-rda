@@ -1,9 +1,67 @@
+# Dependencies
 node_modules
-.next
+.pnp
+.pnp.js
+
+# Testing
+coverage
+
+# Next.js
+.next/
+out/
+build
+
+# Production
+dist
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Backend
 backend/.env
-app/.env.local
-__pycache__
-*.log
-.DS_Store
+backend/__pycache__/
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Sandbox credentials (NEVER COMMIT)
+sandbox/credentials.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.vercel
+*.tsbuildinfo

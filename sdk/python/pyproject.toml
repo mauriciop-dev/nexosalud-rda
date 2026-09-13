@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexosalud"
+version = "0.1.0"
+description = "SDK NexoSalud - Integración IHCE simplificada para IPS"
+readme = "README.md"
+authors = [{name = "NexoSalud Team", email = "hello@nexosalud.com"}]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Healthcare Industry",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31.0",
+    "pydantic>=2.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "black>=24.0.0",
+    "ruff>=0.4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/nexosalud/nexosalud-rda"
+Repository = "https://github.com/nexosalud/nexosalud-rda"
+Documentation = "https://docs.nexosalud.com"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nexosalud*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
