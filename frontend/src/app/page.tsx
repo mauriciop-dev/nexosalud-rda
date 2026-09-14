@@ -1,5 +1,6 @@
 
 import Hero from '@/components/landing/Hero';
+import ProblemVideo from '@/components/landing/ProblemVideo';
 import Features from '@/components/landing/Features';
 import MCPSection from '@/components/landing/MCPSection';
 
@@ -21,6 +22,9 @@ export default function LandingPage() {
       
       <div className="pt-16">
         <Hero />
+        <section id="problema">
+          <ProblemVideo />
+        </section>
         <section id="features">
           <Features />
         </section>
