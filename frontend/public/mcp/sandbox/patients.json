@@ -1,0 +1,47 @@
+[
+  {
+    "tipo_id": "CC",
+    "numero_id": "1234567890",
+    "nombre": "Juan",
+    "apellido": "Pérez",
+    "fecha_nacimiento": "1980-01-15",
+    "sexo": "M",
+    "estado": "vivo"
+  },
+  {
+    "tipo_id": "CC",
+    "numero_id": "9876543210",
+    "nombre": "María",
+    "apellido": "González",
+    "fecha_nacimiento": "1990-05-20",
+    "sexo": "F",
+    "estado": "vivo"
+  },
+  {
+    "tipo_id": "TI",
+    "numero_id": "1122334455",
+    "nombre": "Carlos",
+    "apellido": "Rodríguez",
+    "fecha_nacimiento": "2010-03-12",
+    "sexo": "M",
+    "estado": "vivo"
+  },
+  {
+    "tipo_id": "CE",
+    "numero_id": "5566778899",
+    "nombre": "Ana",
+    "apellido": "Martínez",
+    "fecha_nacimiento": "1985-11-30",
+    "sexo": "F",
+    "estado": "vivo"
+  },
+  {
+    "tipo_id": "PA",
+    "numero_id": "PA12345678",
+    "nombre": "Luis",
+    "apellido": "Hernández",
+    "fecha_nacimiento": "1975-07-22",
+    "sexo": "M",
+    "estado": "vivo"
+  }
+]

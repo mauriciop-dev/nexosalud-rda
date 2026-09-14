@@ -1,0 +1,30 @@
+[
+  {
+    "numero_habilitacion": "0987654321",
+    "nombre": "Clínica Central",
+    "tipo": "hospitalaria",
+    "estado": "habilitada",
+    "sedes": [
+      {"codigo": "00", "nombre": "Sede Principal", "estado": "activa"}
+    ]
+  },
+  {
+    "numero_habilitacion": "1111111111",
+    "nombre": "IPS San Martín",
+    "tipo": "ambulatoria",
+    "estado": "habilitada",
+    "sedes": [
+      {"codigo": "00", "nombre": "Consultorios", "estado": "activa"}
+    ]
+  },
+  {
+    "numero_habilitacion": "2222222222",
+    "nombre": "Hospital Regional Norte",
+    "tipo": "hospitalaria",
+    "estado": "habilitada",
+    "sedes": [
+      {"codigo": "00", "nombre": "Sede Principal", "estado": "activa"},
+      {"codigo": "01", "nombre": "Urgencias", "estado": "activa"}
+    ]
+  }
+]
